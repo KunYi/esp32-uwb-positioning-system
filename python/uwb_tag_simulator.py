@@ -105,13 +105,13 @@ class UWBTagSimulator:
             noisy_distance = self.add_measurement_noise(distance)
             tof = noisy_distance / 299792458.0  # 光速（米/秒）
             anchors.append({
-                "id": anchor_id[1],  # 只取數字部分
-                "distance": noisy_distance,
+                "id": anchor_id,  # 使用完整的錨點ID (e.g., 'A1')
+                "distance": round(noisy_distance, 2),  # 保留兩位小數
                 "tof": tof
             })
 
         return {
-            "tag_id": tag_id,
+            "tag": tag_id,  # 改用 "tag" 而不是 "tag_id"
             "anchors": anchors,
             "true_position": {  # 用於驗證的真實位置
                 "x": tag['pos'][0],

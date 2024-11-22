@@ -144,14 +144,14 @@ class UWBPositionSystem:
             json_data = json.loads(data.decode())
 
             # 解析數據
-            tag_id = json_data.get('tag_id', '1')  # 如果沒有 tag_id，默認為 '1'
+            tag_id = json_data.get('tag', '1')  # 改用 'tag' 而不是 'tag_id'
             if tag_id not in self.tags:
                 self.init_tag(tag_id)
 
             # 解析距離數據
             distances = {}
             for anchor in json_data['anchors']:
-                anchor_id = f"A{anchor['id']}"
+                anchor_id = anchor['id']  # 直接使用完整的錨點ID
                 if anchor_id in self.anchor_positions:
                     distances[anchor_id] = anchor['distance']
 
