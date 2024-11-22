@@ -55,7 +55,7 @@ static unsigned long lastBroadcastTime = 0;  // Last UDP broadcast timestamp
 #define PIN_IRQ 34
 #define PIN_SS 4
 
-#define RNG_DELAY_MS 1000
+#define RNG_DELAY_MS 100
 #define TX_ANT_DLY 16385
 #define RX_ANT_DLY 16385
 #define ALL_MSG_COMMON_LEN (10)
