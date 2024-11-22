@@ -1,5 +1,16 @@
 #include "dw3000.h"
 
+// WiFi Feature Flag - Uncomment to enable WiFi functionality
+//#define ENABLE_WIFI
+
+#ifdef ENABLE_WIFI
+#include <WiFi.h>
+
+/* WiFi Credentials */
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+#endif
+
 /* RX for Tag */
 #define PAN_ID    (0xCA, 0xDE)
 #define TAG_SRC   ('T', '1')
@@ -55,6 +66,21 @@ static bool isExpectedFrame(const uint8_t *frame, const uint32_t len);
 void setup()
 {
   UART_init();
+
+#ifdef ENABLE_WIFI
+  // Initialize WiFi
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.print("Connected to WiFi network with IP Address: ");
+  Serial.println(WiFi.localIP());
+#endif
 
   spiBegin(PIN_IRQ, PIN_RST);
   spiSelect(PIN_SS);
