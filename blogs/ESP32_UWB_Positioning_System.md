@@ -177,11 +177,11 @@ Typical Results:
 *Real-time visualization of UWB position tracking / UWB 定位即時視覺化展示*
 
 ### Dynamic View / 動態視圖
-![2D Visualization Demo](../media/2d.mp4)
+[![2D Visualization Demo](https://img.youtube.com/vi/ISeNsLOaOgc/0.jpg)](https://youtu.be/ISeNsLOaOgc)
 
 *2D real-time tracking visualization / 2D 即時追蹤視覺化*
 
-![3D Visualization Demo](../media/3d.mp4)
+[![3D Visualization Demo](https://img.youtube.com/vi/R-DJ-asZlDA/0.jpg)](https://youtu.be/R-DJ-asZlDA)
 
 *3D spatial tracking visualization / 3D 空間追蹤視覺化*
 

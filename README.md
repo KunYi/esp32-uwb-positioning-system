@@ -199,10 +199,12 @@ Common Issues:
 *Simulation visualization showing real-time tag tracking with three anchors. The blue squares represent fixed anchor positions, the red dot shows the current tag position, and the red trail indicates the tag's movement history.*
 
 ### Dynamic View
-![2D Visualization Demo](media/2d.mp4)
+[![2D Visualization Demo](https://img.youtube.com/vi/ISeNsLOaOgc/0.jpg)](https://youtu.be/ISeNsLOaOgc)
+
 *2D visualization demo showing the real-time tracking capabilities*
 
-![3D Visualization Demo](media/3d.mp4)
+[![3D Visualization Demo](https://img.youtube.com/vi/R-DJ-asZlDA/0.jpg)](https://youtu.be/R-DJ-asZlDA)
+
 *3D visualization demo showing enhanced spatial tracking with height information*
 
 ## Getting Started
