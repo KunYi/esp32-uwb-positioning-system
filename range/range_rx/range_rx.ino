@@ -17,6 +17,27 @@ const int UDP_PORT = 12345;  // Choose a UDP port
 const IPAddress BROADCAST_IP(255, 255, 255, 255);  // Broadcast address
 #endif
 
+/* Position System Settings */
+#define MAX_ANCHORS 10          // Maximum number of anchors to track
+#define MIN_ANCHORS_TO_SEND 2   // Minimum anchors required for position calculation
+#define ANCHOR_DATA_TIMEOUT 5000 // Timeout for anchor data in milliseconds
+#define MAX_VALID_DISTANCE 8.0   // Maximum valid distance in meters
+#define UDP_BROADCAST_INTERVAL 100 // Minimum interval between UDP broadcasts (ms)
+
+/* Anchor Data Structure */
+struct AnchorData {
+    char id[2];        // Anchor ID (2 chars)
+    double distance;   // Measured distance
+    double tof;       // Time of flight
+    unsigned long timestamp; // Last update timestamp
+    bool active;      // Whether this anchor is active
+};
+
+/* Global Variables for Position System */
+static AnchorData anchorArray[MAX_ANCHORS];
+static int activeAnchors = 0;
+static unsigned long lastBroadcastTime = 0;  // Last UDP broadcast timestamp
+
 /* RX for Tag */
 #define PAN_ID    (0xCA, 0xDE)
 #define TAG_SRC   ('T', '1')
@@ -142,6 +163,11 @@ void setup()
 
   Serial.println("Range RX");
   Serial.println("Setup over........");
+
+  // Initialize anchor array
+  for (int i = 0; i < MAX_ANCHORS; i++) {
+    anchorArray[i].active = false;
+  }
 }
 
 void loop()
@@ -211,13 +237,21 @@ void loop()
         snprintf(dist_str, sizeof(dist_str), "A:%s, DIST: %3.2f m", name, distance);
         test_run_info((unsigned char *)dist_str);
 
-        /* Output JSON format via Serial and UDP broadcast */
-        char jsonBuffer[JSON_BUFFER_SIZE];
-        formatRangingDataToJson(jsonBuffer, JSON_BUFFER_SIZE, name, distance, tof);
-        Serial.println(jsonBuffer);
+        /* Update anchor data */
+        updateAnchorData(name, distance, tof);
+
+        /* Clean up invalid anchors */
+        cleanupInvalidAnchors();
+
+        /* If we have enough anchors, send position data */
+        if (activeAnchors >= MIN_ANCHORS_TO_SEND) {
+            char jsonBuffer[JSON_BUFFER_SIZE];
+            formatPositionDataToJson(jsonBuffer, JSON_BUFFER_SIZE);
+            Serial.println(jsonBuffer);  // Serial output without rate limiting
 #ifdef ENABLE_WIFI
-        broadcastUDP(jsonBuffer);
+            broadcastUDP(jsonBuffer);    // UDP broadcast with rate limiting
 #endif
+        }
       }
     }
   }
@@ -241,6 +275,107 @@ static bool isExpectedFrame(const uint8_t *frame, const uint32_t len) {
         rx_resp_msg + RESP_MSG_DST_IDX, RESP_MSG_DST_LEN) == 0)) ? true : false;
 }
 
+/* Function to convert all anchor data to JSON string */
+void formatPositionDataToJson(char* jsonBuffer, size_t bufferSize) {
+    // Start the JSON object with tag ID
+    char tagId[3] = {TAG_SRC, 0};  // Convert TAG_SRC macro to string
+    snprintf(jsonBuffer, bufferSize, "{\"tag\":\"%s\",\"anchors\":[", tagId);
+    
+    // Add each active anchor's data
+    bool firstAnchor = true;
+    for (int i = 0; i < MAX_ANCHORS; i++) {
+        if (anchorArray[i].active) {
+            // Check if the anchor data is still valid
+            if (millis() - anchorArray[i].timestamp <= ANCHOR_DATA_TIMEOUT) {
+                // Add comma if not first anchor
+                if (!firstAnchor) {
+                    strlcat(jsonBuffer, ",", bufferSize);
+                }
+                
+                // Create anchor data JSON
+                char anchorJson[64];
+                snprintf(anchorJson, sizeof(anchorJson),
+                        "{\"id\":\"%c%c\",\"distance\":%.2f,\"tof\":%.2f}",
+                        anchorArray[i].id[0], anchorArray[i].id[1],
+                        anchorArray[i].distance, anchorArray[i].tof);
+                
+                strlcat(jsonBuffer, anchorJson, bufferSize);
+                firstAnchor = false;
+            } else {
+                // Mark inactive if timeout
+                anchorArray[i].active = false;
+                activeAnchors--;
+            }
+        }
+    }
+    
+    // Close the JSON array and object
+    strlcat(jsonBuffer, "]}", bufferSize);
+}
+
+/* Function to update anchor data */
+void updateAnchorData(const char* anchorId, double distance, double tof) {
+    // Check if distance is valid
+    if (distance > MAX_VALID_DISTANCE) {
+        Serial.printf("Anchor %c%c distance %.2f m exceeds maximum valid distance\n", 
+                     anchorId[0], anchorId[1], distance);
+        return;  // Skip updating if distance is too large
+    }
+
+    // Try to find existing anchor
+    for (int i = 0; i < MAX_ANCHORS; i++) {
+        if (anchorArray[i].active && 
+            anchorArray[i].id[0] == anchorId[0] && 
+            anchorArray[i].id[1] == anchorId[1]) {
+            // Update existing anchor
+            anchorArray[i].distance = distance;
+            anchorArray[i].tof = tof;
+            anchorArray[i].timestamp = millis();
+            return;
+        }
+    }
+    
+    // Find empty slot for new anchor
+    for (int i = 0; i < MAX_ANCHORS; i++) {
+        if (!anchorArray[i].active) {
+            // Add new anchor
+            anchorArray[i].id[0] = anchorId[0];
+            anchorArray[i].id[1] = anchorId[1];
+            anchorArray[i].distance = distance;
+            anchorArray[i].tof = tof;
+            anchorArray[i].timestamp = millis();
+            anchorArray[i].active = true;
+            activeAnchors++;
+            Serial.printf("New anchor %c%c added, distance: %.2f m\n", 
+                         anchorId[0], anchorId[1], distance);
+            return;
+        }
+    }
+}
+
+/* Function to check and remove invalid anchors */
+void cleanupInvalidAnchors() {
+    for (int i = 0; i < MAX_ANCHORS; i++) {
+        if (anchorArray[i].active) {
+            // Check timeout
+            if (millis() - anchorArray[i].timestamp > ANCHOR_DATA_TIMEOUT) {
+                Serial.printf("Anchor %c%c removed due to timeout\n", 
+                            anchorArray[i].id[0], anchorArray[i].id[1]);
+                anchorArray[i].active = false;
+                activeAnchors--;
+            }
+            // Check distance
+            else if (anchorArray[i].distance > MAX_VALID_DISTANCE) {
+                Serial.printf("Anchor %c%c removed due to invalid distance: %.2f m\n", 
+                            anchorArray[i].id[0], anchorArray[i].id[1], 
+                            anchorArray[i].distance);
+                anchorArray[i].active = false;
+                activeAnchors--;
+            }
+        }
+    }
+}
+
 /* Function to convert ranging data to JSON string */
 void formatRangingDataToJson(char* jsonBuffer, size_t bufferSize, const char* anchorName, double distance, double tof) {
     snprintf(jsonBuffer, bufferSize,
@@ -248,13 +383,16 @@ void formatRangingDataToJson(char* jsonBuffer, size_t bufferSize, const char* an
              anchorName, distance, tof);
 }
 
-/* Function to broadcast JSON data via UDP */
+/* Function to broadcast UDP with rate limiting */
 void broadcastUDP(const char* jsonData) {
 #ifdef ENABLE_WIFI
-    if (WiFi.status() == WL_CONNECTED) {
+    unsigned long currentTime = millis();
+    if (WiFi.status() == WL_CONNECTED && 
+        (currentTime - lastBroadcastTime >= UDP_BROADCAST_INTERVAL)) {
         udp.beginPacket(BROADCAST_IP, UDP_PORT);
         udp.write((const uint8_t*)jsonData, strlen(jsonData));
         udp.endPacket();
+        lastBroadcastTime = currentTime;
     }
 #endif
 }
