@@ -35,6 +35,9 @@ const char* password = "YOUR_WIFI_PASSWORD";
 #define POLL_TX_TO_RESP_RX_DLY_UUS 240
 #define RESP_RX_TIMEOUT_UUS 400
 
+/* JSON buffer size */
+#define JSON_BUFFER_SIZE 128
+
 /* Default communication configuration. We use default non-STS DW mode. */
 static dwt_config_t config = {
     5,                /* Channel number. */
@@ -71,7 +74,7 @@ void setup()
   // Initialize WiFi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  
+
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -193,9 +196,16 @@ void loop()
         distance = tof * SPEED_OF_LIGHT;
         char name[3] = { 0 };
         memcpy(name, rx_buffer + RESP_MSG_SRC_IDX, RESP_MSG_SRC_LEN);
+
         /* Display computed distance on LCD. */
+        char dist_str[32];
         snprintf(dist_str, sizeof(dist_str), "A:%s, DIST: %3.2f m", name, distance);
         test_run_info((unsigned char *)dist_str);
+
+        /* Output JSON format via Serial */
+        char jsonBuffer[JSON_BUFFER_SIZE];
+        formatRangingDataToJson(jsonBuffer, JSON_BUFFER_SIZE, name, distance, tof);
+        Serial.println(jsonBuffer);
       }
     }
   }
@@ -217,4 +227,11 @@ static bool isExpectedFrame(const uint8_t *frame, const uint32_t len) {
     return ((memcmp(frame, rx_resp_msg, 5) == 0) &&
       (memcmp(frame + RESP_MSG_DST_IDX,
         rx_resp_msg + RESP_MSG_DST_IDX, RESP_MSG_DST_LEN) == 0)) ? true : false;
+}
+
+/* Function to convert ranging data to JSON string */
+void formatRangingDataToJson(char* jsonBuffer, size_t bufferSize, const char* anchorName, double distance, double tof) {
+    snprintf(jsonBuffer, bufferSize,
+             "{\"anchor\":\"%s\",\"distance\":%.2f,\"tof\":%.2f}",
+             anchorName, distance, tof);
 }
