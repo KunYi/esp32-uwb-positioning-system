@@ -1,5 +1,18 @@
 #include "dw3000.h"
 
+/* RX for Tag */
+#define PAN_ID    (0xCA, 0xDE)
+#define TAG_SRC   ('T', '1')
+
+/* Anchor List Settings */
+#define NUM_ANCHORS 3  // 設定 Anchor 的數量
+static const char ANCHOR_LIST[NUM_ANCHORS][2] = {
+    {'A', '1'},  // Anchor 1
+    {'A', '2'},  // Anchor 2
+    {'A', '3'}   // Anchor 3
+};
+static int currentAnchorIndex = 0;  // 目前正在測距的 Anchor 索引
+
 // WiFi Feature Flag - Uncomment to enable WiFi functionality
 //#define ENABLE_WIFI
 
@@ -38,11 +51,6 @@ static AnchorData anchorArray[MAX_ANCHORS];
 static int activeAnchors = 0;
 static unsigned long lastBroadcastTime = 0;  // Last UDP broadcast timestamp
 
-/* RX for Tag */
-#define PAN_ID    (0xCA, 0xDE)
-#define TAG_SRC   ('T', '1')
-#define TAG_DST   ('A', 'L')
-
 #define PIN_RST 27
 #define PIN_IRQ 34
 #define PIN_SS 4
@@ -50,7 +58,7 @@ static unsigned long lastBroadcastTime = 0;  // Last UDP broadcast timestamp
 #define RNG_DELAY_MS 1000
 #define TX_ANT_DLY 16385
 #define RX_ANT_DLY 16385
-#define ALL_MSG_COMMON_LEN (5)
+#define ALL_MSG_COMMON_LEN (10)
 #define ALL_MSG_SN_IDX 2
 #define RESP_MSG_SRC_IDX (5)
 #define RESP_MSG_SRC_LEN (2)
@@ -82,8 +90,8 @@ static dwt_config_t config = {
     DWT_PDOA_M0       /* PDOA mode off */
 };
 
-static uint8_t tx_poll_msg[] = {0x41, 0x88, 0, PAN_ID, TAG_SRC, TAG_DST, 0xE0, 0, 0};
-static uint8_t rx_resp_msg[] = {0x41, 0x88, 0, PAN_ID, TAG_DST, TAG_SRC, 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint8_t tx_poll_msg[12] = {0x41, 0x88, 0, PAN_ID, TAG_SRC, 0, 0, 0xE0, 0, 0};
+static uint8_t rx_resp_msg[20] = {0x41, 0x88, 0, PAN_ID, 0, 0, TAG_SRC, 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static uint8_t frame_seq_nb = 0;
 static uint8_t rx_buffer[20];
 static uint32_t status_reg = 0;
@@ -172,6 +180,14 @@ void setup()
 
 void loop()
 {
+  // 設定目前要測距的 Anchor ID
+  tx_poll_msg[RESP_MSG_DST_IDX] = ANCHOR_LIST[currentAnchorIndex][0];
+  tx_poll_msg[RESP_MSG_DST_IDX + 1] = ANCHOR_LIST[currentAnchorIndex][1];
+
+  // 同時更新 rx_resp_msg 中的預期回應來源
+  rx_resp_msg[RESP_MSG_SRC_IDX] = ANCHOR_LIST[currentAnchorIndex][0];
+  rx_resp_msg[RESP_MSG_SRC_IDX + 1] = ANCHOR_LIST[currentAnchorIndex][1];
+
   /* Write frame data to DW IC and prepare transmission. See NOTE 7 below. */
   tx_poll_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
   dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
@@ -245,11 +261,11 @@ void loop()
 
         /* If we have enough anchors, send position data */
         if (activeAnchors >= MIN_ANCHORS_TO_SEND) {
-            char jsonBuffer[JSON_BUFFER_SIZE];
-            formatPositionDataToJson(jsonBuffer, JSON_BUFFER_SIZE);
-            Serial.println(jsonBuffer);  // Serial output without rate limiting
+          char jsonBuffer[JSON_BUFFER_SIZE];
+          formatPositionDataToJson(jsonBuffer, JSON_BUFFER_SIZE);
+          Serial.println(jsonBuffer);  // Serial output without rate limiting
 #ifdef ENABLE_WIFI
-            broadcastUDP(jsonBuffer);    // UDP broadcast with rate limiting
+          broadcastUDP(jsonBuffer);    // UDP broadcast with rate limiting
 #endif
         }
       }
@@ -261,18 +277,23 @@ void loop()
     dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR);
   }
 
+  // 移動到下一個 Anchor
+  currentAnchorIndex = (currentAnchorIndex + 1) % NUM_ANCHORS;
+
   /* Execute a delay between ranging exchanges. */
   Sleep(RNG_DELAY_MS);
 }
 
 /* check PAN and DST ID */
 static bool isExpectedFrame(const uint8_t *frame, const uint32_t len) {
-    if (len < (RESP_MSG_DST_IDX +RESP_MSG_DST_LEN))
-      return false;
+    if (len < (RESP_MSG_DST_IDX + RESP_MSG_DST_LEN))
+        return false;
 
-    return ((memcmp(frame, rx_resp_msg, 5) == 0) &&
-      (memcmp(frame + RESP_MSG_DST_IDX,
-        rx_resp_msg + RESP_MSG_DST_IDX, RESP_MSG_DST_LEN) == 0)) ? true : false;
+    // 檢查基本訊息格式 (包含 PAN ID 等)
+    if (memcmp(frame, rx_resp_msg, ALL_MSG_COMMON_LEN) != 0)
+        return false;
+
+    return true;
 }
 
 /* Function to convert all anchor data to JSON string */
