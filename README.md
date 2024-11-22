@@ -58,6 +58,10 @@ This project was developed using [Windsurf](https://codeium.com/windsurf), the w
 - Measurement noise simulation
 - UDP broadcast simulation
 
+## Visualization Demo
+![UWB Position Tracking Demo](images/demo.jpg)
+*Simulation visualization showing real-time tag tracking with three anchors. The blue squares represent fixed anchor positions, the red dot shows the current tag position, and the red trail indicates the tag's movement history. This demo was generated using our Python-based simulation tools, demonstrating the circular movement pattern with real-time distance calculations and position triangulation.*
+
 ## Getting Started
 
 ### Hardware Setup
