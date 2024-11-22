@@ -280,7 +280,7 @@ void formatPositionDataToJson(char* jsonBuffer, size_t bufferSize) {
     // Start the JSON object with tag ID
     char tagId[3] = {TAG_SRC, 0};  // Convert TAG_SRC macro to string
     snprintf(jsonBuffer, bufferSize, "{\"tag\":\"%s\",\"anchors\":[", tagId);
-    
+
     // Add each active anchor's data
     bool firstAnchor = true;
     for (int i = 0; i < MAX_ANCHORS; i++) {
@@ -291,14 +291,14 @@ void formatPositionDataToJson(char* jsonBuffer, size_t bufferSize) {
                 if (!firstAnchor) {
                     strlcat(jsonBuffer, ",", bufferSize);
                 }
-                
+
                 // Create anchor data JSON
                 char anchorJson[64];
                 snprintf(anchorJson, sizeof(anchorJson),
                         "{\"id\":\"%c%c\",\"distance\":%.2f,\"tof\":%.2f}",
                         anchorArray[i].id[0], anchorArray[i].id[1],
                         anchorArray[i].distance, anchorArray[i].tof);
-                
+
                 strlcat(jsonBuffer, anchorJson, bufferSize);
                 firstAnchor = false;
             } else {
@@ -308,7 +308,7 @@ void formatPositionDataToJson(char* jsonBuffer, size_t bufferSize) {
             }
         }
     }
-    
+
     // Close the JSON array and object
     strlcat(jsonBuffer, "]}", bufferSize);
 }
@@ -317,15 +317,15 @@ void formatPositionDataToJson(char* jsonBuffer, size_t bufferSize) {
 void updateAnchorData(const char* anchorId, double distance, double tof) {
     // Check if distance is valid
     if (distance > MAX_VALID_DISTANCE) {
-        Serial.printf("Anchor %c%c distance %.2f m exceeds maximum valid distance\n", 
+        Serial.printf("Anchor %c%c distance %.2f m exceeds maximum valid distance\n",
                      anchorId[0], anchorId[1], distance);
         return;  // Skip updating if distance is too large
     }
 
     // Try to find existing anchor
     for (int i = 0; i < MAX_ANCHORS; i++) {
-        if (anchorArray[i].active && 
-            anchorArray[i].id[0] == anchorId[0] && 
+        if (anchorArray[i].active &&
+            anchorArray[i].id[0] == anchorId[0] &&
             anchorArray[i].id[1] == anchorId[1]) {
             // Update existing anchor
             anchorArray[i].distance = distance;
@@ -334,7 +334,7 @@ void updateAnchorData(const char* anchorId, double distance, double tof) {
             return;
         }
     }
-    
+
     // Find empty slot for new anchor
     for (int i = 0; i < MAX_ANCHORS; i++) {
         if (!anchorArray[i].active) {
@@ -346,7 +346,7 @@ void updateAnchorData(const char* anchorId, double distance, double tof) {
             anchorArray[i].timestamp = millis();
             anchorArray[i].active = true;
             activeAnchors++;
-            Serial.printf("New anchor %c%c added, distance: %.2f m\n", 
+            Serial.printf("New anchor %c%c added, distance: %.2f m\n",
                          anchorId[0], anchorId[1], distance);
             return;
         }
@@ -359,15 +359,15 @@ void cleanupInvalidAnchors() {
         if (anchorArray[i].active) {
             // Check timeout
             if (millis() - anchorArray[i].timestamp > ANCHOR_DATA_TIMEOUT) {
-                Serial.printf("Anchor %c%c removed due to timeout\n", 
+                Serial.printf("Anchor %c%c removed due to timeout\n",
                             anchorArray[i].id[0], anchorArray[i].id[1]);
                 anchorArray[i].active = false;
                 activeAnchors--;
             }
             // Check distance
             else if (anchorArray[i].distance > MAX_VALID_DISTANCE) {
-                Serial.printf("Anchor %c%c removed due to invalid distance: %.2f m\n", 
-                            anchorArray[i].id[0], anchorArray[i].id[1], 
+                Serial.printf("Anchor %c%c removed due to invalid distance: %.2f m\n",
+                            anchorArray[i].id[0], anchorArray[i].id[1],
                             anchorArray[i].distance);
                 anchorArray[i].active = false;
                 activeAnchors--;
@@ -387,7 +387,7 @@ void formatRangingDataToJson(char* jsonBuffer, size_t bufferSize, const char* an
 void broadcastUDP(const char* jsonData) {
 #ifdef ENABLE_WIFI
     unsigned long currentTime = millis();
-    if (WiFi.status() == WL_CONNECTED && 
+    if (WiFi.status() == WL_CONNECTED &&
         (currentTime - lastBroadcastTime >= UDP_BROADCAST_INTERVAL)) {
         udp.beginPacket(BROADCAST_IP, UDP_PORT);
         udp.write((const uint8_t*)jsonData, strlen(jsonData));

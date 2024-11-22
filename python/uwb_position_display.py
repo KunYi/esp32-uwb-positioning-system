@@ -56,28 +56,28 @@ class UWBPositionSystem:
         # 準備方程式係數
         A = []
         b = []
-        
+
         # 選擇前三個 anchors
         anchor_ids = list(distances.keys())[:3]
-        
+
         for i in range(2):  # 我們只需要兩個方程式
             anchor1 = self.anchor_positions[anchor_ids[i]]
             anchor2 = self.anchor_positions[anchor_ids[i+1]]
             r1 = distances[anchor_ids[i]]
             r2 = distances[anchor_ids[i+1]]
-            
+
             # 建立方程式係數
             A.append([
                 2 * (anchor2[0] - anchor1[0]),
                 2 * (anchor2[1] - anchor1[1])
             ])
-            
+
             b.append(
-                r1*r1 - r2*r2 - 
+                r1*r1 - r2*r2 -
                 anchor1[0]*anchor1[0] - anchor1[1]*anchor1[1] +
                 anchor2[0]*anchor2[0] + anchor2[1]*anchor2[1]
             )
-        
+
         try:
             # 解聯立方程式
             position = np.linalg.solve(A, b)
@@ -91,21 +91,21 @@ class UWBPositionSystem:
             # 接收 UDP 數據
             data, addr = self.sock.recvfrom(1024)
             json_data = json.loads(data.decode())
-            
+
             # 解析距離數據
             distances = {}
             for anchor in json_data['anchors']:
-                anchor_id = f"A{anchor['id']}"
+                anchor_id = anchor['id']  # 直接使用完整的錨點ID
                 if anchor_id in self.anchor_positions:
                     distances[anchor_id] = anchor['distance']
 
             # 計算位置
             x, y = self.trilateration(distances)
-            
+
             if x is not None and y is not None:
                 # 更新 Tag 位置
                 self.tag_point.set_data([x], [y])
-                
+
                 # 更新軌跡
                 self.trail_x.append(x)
                 self.trail_y.append(y)
@@ -131,7 +131,7 @@ class UWBPositionSystem:
         except Exception as e:
             print(f"Error: {e}")
 
-        return (self.tag_point, self.tag_trail, 
+        return (self.tag_point, self.tag_trail,
                 *self.distance_texts.values())
 
     def run(self):
