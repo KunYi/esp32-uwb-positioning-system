@@ -3,7 +3,7 @@
 
 [English Version](#english-version) | [中文版本](#中文版本)
 
-![UWB Position Tracking Demo](../images/demo_3D.jpg)
+![UWB Position Tracking Demo](../media/demo_3D.jpg)
 *Real-time visualization of UWB position tracking / UWB 定位即時視覺化展示*
 
 ---
@@ -170,8 +170,22 @@ Typical Results:
 
 ---
 
-*This project is licensed under the MIT License - see the LICENSE file for details*
-*本專案採用 MIT 授權 - 詳見 LICENSE 文件*
+## Visualization / 視覺化展示
+
+### Static View / 靜態視圖
+![UWB Position Tracking Demo](../media/demo_3D.jpg)
+*Real-time visualization of UWB position tracking / UWB 定位即時視覺化展示*
+
+### Dynamic View / 動態視圖
+![2D Visualization Demo](../media/2d.mp4)
+
+*2D real-time tracking visualization / 2D 即時追蹤視覺化*
+
+![3D Visualization Demo](../media/3d.mp4)
+
+*3D spatial tracking visualization / 3D 空間追蹤視覺化*
+
+---
 
 ## 中文版本
 
@@ -334,3 +348,6 @@ ESP32 UWB 室內定位系統是一個開源專案，結合超寬頻（UWB）技�
    - 解決方案：實現適應性更新率
 
 ---
+
+*This project is licensed under the MIT License - see the LICENSE file for details*
+*本專案採用 MIT 授權 - 詳見 LICENSE 文件*

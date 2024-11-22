@@ -193,8 +193,17 @@ Common Issues:
 - Keep firmware updated
 
 ## Visualization Demo
-![UWB Position Tracking Demo](images/demo.jpg)
-*Simulation visualization showing real-time tag tracking with three anchors. The blue squares represent fixed anchor positions, the red dot shows the current tag position, and the red trail indicates the tag's movement history. This demo was generated using our Python-based simulation tools, demonstrating the circular movement pattern with real-time distance calculations and position triangulation.*
+
+### Static View
+![UWB Position Tracking Demo](media/demo.jpg)
+*Simulation visualization showing real-time tag tracking with three anchors. The blue squares represent fixed anchor positions, the red dot shows the current tag position, and the red trail indicates the tag's movement history.*
+
+### Dynamic View
+![2D Visualization Demo](media/2d.mp4)
+*2D visualization demo showing the real-time tracking capabilities*
+
+![3D Visualization Demo](media/3d.mp4)
+*3D visualization demo showing enhanced spatial tracking with height information*
 
 ## Getting Started
 
