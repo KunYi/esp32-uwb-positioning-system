@@ -1,17 +1,21 @@
 #include "dw3000.h"
 
 /* RX for Tag */
-#define PAN_ID    (0xCA, 0xDE)
-#define TAG_SRC   ('T', '1')
+// // Convert two chars to uint16_t address (little-endian: second char will be in high byte))
+#define ADDR_FROM_CHARS(c1, c2) ((uint16_t)((uint16_t)(c2) << 8) | (uint16_t)(c1))
+
+/* Device Address Settings */
+static const uint16_t PAN_ID_VAL = ADDR_FROM_CHARS(0xCA, 0xDE);
+static const uint16_t TAG_SRC_VAL = ADDR_FROM_CHARS('T', '1'); // "T1" in memory
 
 /* Anchor List Settings */
-#define NUM_ANCHORS 3  // 設定 Anchor 的數量
-static const char ANCHOR_LIST[NUM_ANCHORS][2] = {
-    {'A', '1'},  // Anchor 1
-    {'A', '2'},  // Anchor 2
-    {'A', '3'}   // Anchor 3
+#define NUM_ANCHORS 3  // Number of anchors in the system
+static const uint16_t ANCHOR_LIST[NUM_ANCHORS] = {
+    ADDR_FROM_CHARS('A', '1'),  // "A1" in memory
+    ADDR_FROM_CHARS('A', '2'),  // "A2" in memory
+    ADDR_FROM_CHARS('A', '3')   // "A3" in memory
 };
-static int currentAnchorIndex = 0;  // 目前正在測距的 Anchor 索引
+static int currentAnchorIndex = 0;  // Current anchor being ranged
 
 // WiFi Feature Flag - Uncomment to enable WiFi functionality
 //#define ENABLE_WIFI
@@ -73,6 +77,52 @@ static unsigned long lastBroadcastTime = 0;  // Last UDP broadcast timestamp
 /* JSON buffer size */
 #define JSON_BUFFER_SIZE 128
 
+/* Original uint8_t array version for reference
+static uint8_t tx_poll_msg[] = {
+    0x41, 0x88,     // Frame Control
+    0x00,           // Sequence number
+    0xCA, 0xDE,     // PAN ID (0xDECA)
+    0x41, 0x31,     // Destination address ('A', '1')
+    0x54, 0x31,     // Source address ('T', '1')
+    0xE0,           // Message type for Poll
+    0x00, 0x00      // CRC
+};
+
+static uint8_t rx_resp_msg[] = {
+    0x41, 0x88,     // Frame Control
+    0x00,           // Sequence number
+    0xCA, 0xDE,     // PAN ID (0xDECA)
+    0x54, 0x31,     // Destination address ('T', '1')
+    0x41, 0x31,     // Source address ('A', '1')
+    0xE1,           // Message type for Response
+    0x00, 0x00, 0x00, 0x00,  // Poll RX timestamp
+    0x00, 0x00, 0x00, 0x00,  // Response TX timestamp
+    0x00, 0x00      // CRC
+};
+*/
+
+/* Message Structures */
+struct MessageHeader {
+    uint8_t frameCtrl[2];    // 0x41, 0x88
+    uint8_t seq;             // Sequence number
+    uint16_t panID;          // PAN ID (0xDECA)
+    uint16_t destAddr;       // Destination Address
+    uint16_t sourceAddr;     // Source Address
+    uint8_t msgType;         // Message type (0xE0 for poll, 0xE1 for response)
+} __attribute__((packed));
+
+struct PollMsg {
+    MessageHeader header;
+    uint8_t padding[2];      // Additional padding/reserved
+} __attribute__((packed));
+
+struct RespMsg {
+    MessageHeader header;
+    uint32_t pollRxTs;       // Poll message reception timestamp
+    uint32_t respTxTs;       // Response message transmission timestamp
+    uint8_t padding[2];      // Additional padding/reserved
+} __attribute__((packed));
+
 /* Default communication configuration. We use default non-STS DW mode. */
 static dwt_config_t config = {
     5,                /* Channel number. */
@@ -90,10 +140,30 @@ static dwt_config_t config = {
     DWT_PDOA_M0       /* PDOA mode off */
 };
 
-static uint8_t tx_poll_msg[12] = {0x41, 0x88, 0, PAN_ID, TAG_SRC, 0, 0, 0xE0, 0, 0};
-static uint8_t rx_resp_msg[20] = {0x41, 0x88, 0, PAN_ID, 0, 0, TAG_SRC, 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static PollMsg tx_poll_msg = {
+    .header = {
+        .frameCtrl = {0x41, 0x88},
+        .seq = 0,
+        .panID = PAN_ID_VAL,
+        .destAddr = 0,  // Will be set in loop()
+        .sourceAddr = TAG_SRC_VAL,
+        .msgType = 0xE0
+    }
+};
+
+static RespMsg rx_resp_msg = {
+    .header = {
+        .frameCtrl = {0x41, 0x88},
+        .seq = 0,
+        .panID = PAN_ID_VAL,
+        .destAddr = TAG_SRC_VAL,
+        .sourceAddr = 0,  // Will be set in loop()
+        .msgType = 0xE1
+    }
+};
+
 static uint8_t frame_seq_nb = 0;
-static uint8_t rx_buffer[20];
+static uint8_t rx_buffer[sizeof(RespMsg)];
 static uint32_t status_reg = 0;
 static double tof;
 static double distance;
@@ -180,18 +250,15 @@ void setup()
 
 void loop()
 {
-  // 設定目前要測距的 Anchor ID
-  tx_poll_msg[RESP_MSG_DST_IDX] = ANCHOR_LIST[currentAnchorIndex][0];
-  tx_poll_msg[RESP_MSG_DST_IDX + 1] = ANCHOR_LIST[currentAnchorIndex][1];
-
-  // 同時更新 rx_resp_msg 中的預期回應來源
-  rx_resp_msg[RESP_MSG_SRC_IDX] = ANCHOR_LIST[currentAnchorIndex][0];
-  rx_resp_msg[RESP_MSG_SRC_IDX + 1] = ANCHOR_LIST[currentAnchorIndex][1];
+  // Set current anchor ID
+  tx_poll_msg.header.destAddr = ANCHOR_LIST[currentAnchorIndex];
+  // Update expected response source address
+  rx_resp_msg.header.sourceAddr = ANCHOR_LIST[currentAnchorIndex];
 
   /* Write frame data to DW IC and prepare transmission. See NOTE 7 below. */
-  tx_poll_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
+  tx_poll_msg.header.seq = frame_seq_nb;
   dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
-  dwt_writetxdata(sizeof(tx_poll_msg), tx_poll_msg, 0); /* Zero offset in TX buffer. */
+  dwt_writetxdata(sizeof(tx_poll_msg), (uint8_t*)&tx_poll_msg, 0); /* Zero offset in TX buffer. */
   dwt_writetxfctrl(sizeof(tx_poll_msg), 0, 1);          /* Zero offset in TX buffer, ranging. */
 
   /* Start transmission, indicating that a response is expected so that reception is enabled automatically after the frame is sent and the delay
@@ -221,8 +288,9 @@ void loop()
 
       /* Check that the frame is the expected response from the companion "SS TWR responder" example.
        * As the sequence number field of the frame is not relevant, it is cleared to simplify the validation of the frame. */
-      rx_buffer[ALL_MSG_SN_IDX] = 0;
-      if (isExpectedFrame(rx_buffer, frame_len))
+      RespMsg* resp_msg = (RespMsg*)rx_buffer;
+      resp_msg->header.seq = 0;
+      if (isExpectedFrame((uint8_t*)resp_msg, frame_len))
       {
         uint32_t poll_tx_ts, resp_rx_ts, poll_rx_ts, resp_tx_ts;
         int32_t rtd_init, rtd_resp;
@@ -236,8 +304,9 @@ void loop()
         clockOffsetRatio = ((float)dwt_readclockoffset()) / (uint32_t)(1 << 26);
 
         /* Get timestamps embedded in response message. */
-        resp_msg_get_ts(&rx_buffer[RESP_MSG_POLL_RX_TS_IDX], &poll_rx_ts);
-        resp_msg_get_ts(&rx_buffer[RESP_MSG_RESP_TX_TS_IDX], &resp_tx_ts);
+
+        resp_msg_get_ts((uint8_t*)&resp_msg->pollRxTs, &poll_rx_ts);
+        resp_msg_get_ts((uint8_t*)&resp_msg->respTxTs, &resp_tx_ts);
 
         /* Compute time of flight and distance, using clock offset ratio to correct for differing local and remote clock rates */
         rtd_init = resp_rx_ts - poll_tx_ts;
@@ -246,7 +315,8 @@ void loop()
         tof = ((rtd_init - rtd_resp * (1 - clockOffsetRatio)) / 2.0) * DWT_TIME_UNITS;
         distance = tof * SPEED_OF_LIGHT;
         char name[3] = { 0 };
-        memcpy(name, rx_buffer + RESP_MSG_SRC_IDX, RESP_MSG_SRC_LEN);
+        name[0] = resp_msg->header.sourceAddr >> 8;
+        name[1] = resp_msg->header.sourceAddr & 0xFF;
 
         /* Display computed distance on LCD. */
         char dist_str[32];
@@ -277,20 +347,20 @@ void loop()
     dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR);
   }
 
-  // 移動到下一個 Anchor
+  // Move to next anchor
   currentAnchorIndex = (currentAnchorIndex + 1) % NUM_ANCHORS;
 
   /* Execute a delay between ranging exchanges. */
   Sleep(RNG_DELAY_MS);
 }
 
-/* check PAN and DST ID */
+/* Check PAN and DST ID */
 static bool isExpectedFrame(const uint8_t *frame, const uint32_t len) {
     if (len < (RESP_MSG_DST_IDX + RESP_MSG_DST_LEN))
         return false;
 
-    // 檢查基本訊息格式 (包含 PAN ID 等)
-    if (memcmp(frame, rx_resp_msg, ALL_MSG_COMMON_LEN) != 0)
+    // Check basic message format (including PAN ID)
+    if (memcmp(frame, (uint8_t*)&rx_resp_msg, ALL_MSG_COMMON_LEN) != 0)
         return false;
 
     return true;
@@ -299,39 +369,26 @@ static bool isExpectedFrame(const uint8_t *frame, const uint32_t len) {
 /* Function to convert all anchor data to JSON string */
 void formatPositionDataToJson(char* jsonBuffer, size_t bufferSize) {
     // Start the JSON object with tag ID
-    char tagId[3] = {TAG_SRC, 0};  // Convert TAG_SRC macro to string
+    char tagId[3] = {(char)(TAG_SRC_VAL >> 8), (char)(TAG_SRC_VAL & 0xFF), 0};  // Extract "T1" from uint16_t
     snprintf(jsonBuffer, bufferSize, "{\"tag\":\"%s\",\"anchors\":[", tagId);
 
     // Add each active anchor's data
     bool firstAnchor = true;
     for (int i = 0; i < MAX_ANCHORS; i++) {
         if (anchorArray[i].active) {
-            // Check if the anchor data is still valid
-            if (millis() - anchorArray[i].timestamp <= ANCHOR_DATA_TIMEOUT) {
-                // Add comma if not first anchor
-                if (!firstAnchor) {
-                    strlcat(jsonBuffer, ",", bufferSize);
-                }
-
-                // Create anchor data JSON
-                char anchorJson[64];
-                snprintf(anchorJson, sizeof(anchorJson),
-                        "{\"id\":\"%c%c\",\"distance\":%.2f,\"tof\":%.2f}",
-                        anchorArray[i].id[0], anchorArray[i].id[1],
-                        anchorArray[i].distance, anchorArray[i].tof);
-
-                strlcat(jsonBuffer, anchorJson, bufferSize);
-                firstAnchor = false;
-            } else {
-                // Mark inactive if timeout
-                anchorArray[i].active = false;
-                activeAnchors--;
+            if (!firstAnchor) {
+                strncat(jsonBuffer, ",", bufferSize - strlen(jsonBuffer) - 1);
             }
+            char anchorJson[64];
+            snprintf(anchorJson, sizeof(anchorJson),
+                    "{\"id\":\"%c%c\",\"dist\":%.2f,\"tof\":%.2f}",
+                    anchorArray[i].id[0], anchorArray[i].id[1],
+                    anchorArray[i].distance, anchorArray[i].tof);
+            strncat(jsonBuffer, anchorJson, bufferSize - strlen(jsonBuffer) - 1);
+            firstAnchor = false;
         }
     }
-
-    // Close the JSON array and object
-    strlcat(jsonBuffer, "]}", bufferSize);
+    strncat(jsonBuffer, "]}", bufferSize - strlen(jsonBuffer) - 1);
 }
 
 /* Function to update anchor data */
