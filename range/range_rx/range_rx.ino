@@ -5,10 +5,16 @@
 
 #ifdef ENABLE_WIFI
 #include <WiFi.h>
+#include <WiFiUdp.h>
 
 /* WiFi Credentials */
 const char* ssid = "YOUR_WIFI_SSID";
 const char* password = "YOUR_WIFI_PASSWORD";
+
+/* UDP Broadcast Settings */
+WiFiUDP udp;
+const int UDP_PORT = 12345;  // Choose a UDP port
+const IPAddress BROADCAST_IP(255, 255, 255, 255);  // Broadcast address
 #endif
 
 /* RX for Tag */
@@ -83,6 +89,9 @@ void setup()
   Serial.println();
   Serial.print("Connected to WiFi network with IP Address: ");
   Serial.println(WiFi.localIP());
+
+  // Start UDP
+  udp.begin(UDP_PORT);
 #endif
 
   spiBegin(PIN_IRQ, PIN_RST);
@@ -202,10 +211,13 @@ void loop()
         snprintf(dist_str, sizeof(dist_str), "A:%s, DIST: %3.2f m", name, distance);
         test_run_info((unsigned char *)dist_str);
 
-        /* Output JSON format via Serial */
+        /* Output JSON format via Serial and UDP broadcast */
         char jsonBuffer[JSON_BUFFER_SIZE];
         formatRangingDataToJson(jsonBuffer, JSON_BUFFER_SIZE, name, distance, tof);
         Serial.println(jsonBuffer);
+#ifdef ENABLE_WIFI
+        broadcastUDP(jsonBuffer);
+#endif
       }
     }
   }
@@ -234,4 +246,15 @@ void formatRangingDataToJson(char* jsonBuffer, size_t bufferSize, const char* an
     snprintf(jsonBuffer, bufferSize,
              "{\"anchor\":\"%s\",\"distance\":%.2f,\"tof\":%.2f}",
              anchorName, distance, tof);
+}
+
+/* Function to broadcast JSON data via UDP */
+void broadcastUDP(const char* jsonData) {
+#ifdef ENABLE_WIFI
+    if (WiFi.status() == WL_CONNECTED) {
+        udp.beginPacket(BROADCAST_IP, UDP_PORT);
+        udp.write((const uint8_t*)jsonData, strlen(jsonData));
+        udp.endPacket();
+    }
+#endif
 }
