@@ -51,7 +51,7 @@ This project was developed using [Windsurf](https://codeium.com/windsurf), the w
 - Anchor position display
 - Tag movement trail
 - Distance measurements visualization
-- Interactive Web Visualization ([Live Demo](https://kunyi.github.io/esp32-uwb-positioning-system/web/))
+- Interactive Web Visualization ([Live Demo](https://kunyi.github.io/esp32-uwb-positioning-system/))
   - Real-time anchor and tag position display
   - Configurable positioning methods (2/3/many anchors)
   - Dynamic range visualization
