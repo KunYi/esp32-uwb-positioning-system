@@ -74,6 +74,7 @@
             const [controlMode, setControlMode] = React.useState('auto');
             const [manualPosition, setManualPosition] = React.useState({ x: 200, y: 200 });
             const [isDragging, setIsDragging] = React.useState(false);
+            const [angle, setAngle] = React.useState(0);  // 用於調整半徑的偏移量
             const svgRef = React.useRef(null);
 
             // 定義基站位置配置
@@ -94,16 +95,6 @@
                     { x: 100, y: 267 },  // 左下基站
                 ]
             };
-
-            // 動畫效果
-            React.useEffect(() => {
-                if (controlMode === 'auto') {
-                    const timer = setInterval(() => {
-                        setTime(prev => (prev + 1) % 100);
-                    }, 50);
-                    return () => clearInterval(timer);
-                }
-            }, [controlMode]);
 
             // 處理拖曳開始
             const handleMouseDown = (e) => {
@@ -143,16 +134,17 @@
 
                 const centerX = 200;
                 const centerY = 200;
+                const radiusOffset = angle;  // 使用 angle 作為半徑的偏移量
 
                 if (tagPosition === 'inside') {
                     return {
-                        x: centerX + Math.cos(time * 0.1) * radius,
-                        y: centerY + Math.sin(time * 0.1) * radius
+                        x: centerX + Math.cos(time * 0.1) * (radius + radiusOffset),
+                        y: centerY + Math.sin(time * 0.1) * (radius + radiusOffset)
                     };
                 } else {
                     return {
-                        x: centerX + Math.cos(time * 0.1) * (radius + 100),
-                        y: centerY + Math.sin(time * 0.1) * (radius + 100)
+                        x: centerX + Math.cos(time * 0.1) * (radius + 100 + radiusOffset),
+                        y: centerY + Math.sin(time * 0.1) * (radius + 100 + radiusOffset)
                     };
                 }
             };
@@ -205,6 +197,16 @@
 
             const tag = getTagPosition();
 
+            // 動畫效果
+            React.useEffect(() => {
+                if (controlMode === 'auto') {
+                    const timer = setInterval(() => {
+                        setTime(prev => (prev + 1) % 100);
+                    }, 50);
+                    return () => clearInterval(timer);
+                }
+            }, [controlMode]);
+
             // 在組件掛載後渲染數學公式
             React.useEffect(() => {
                 const renderMath = () => {
@@ -230,9 +232,6 @@
                     setTimeout(renderMath, 1000);
                 }
             }, [method]);  // 當 method 改變時重新渲染
-
-            const [angle, setAngle] = React.useState(0);
-            const [speed, setSpeed] = React.useState(1);
 
             return (
                 <div className="container mx-auto px-4 py-8">
@@ -268,25 +267,10 @@
                                             <div className="mt-1">
                                                 <input
                                                     type="range"
-                                                    min="0"
-                                                    max="360"
+                                                    min="-10"
+                                                    max="30"
                                                     value={angle}
                                                     onChange={(e) => setAngle(Number(e.target.value))}
-                                                    className="w-full"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="mt-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Speed | 速度
-                                            </label>
-                                            <div className="mt-1">
-                                                <input
-                                                    type="range"
-                                                    min="1"
-                                                    max="10"
-                                                    value={speed}
-                                                    onChange={(e) => setSpeed(Number(e.target.value))}
                                                     className="w-full"
                                                 />
                                             </div>
@@ -601,7 +585,8 @@
         };
 
         // 渲染應用
-        ReactDOM.render(<UWBVisualization />, document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<UWBVisualization />);
     </script>
 </body>
 </html>
