@@ -150,19 +150,27 @@
                 }
             };
 
-            // 計算距離
-            const getDistance = (p1, p2) => {
-                return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+            // 像素轉換為米的比例（1像素 = 0.15米）
+            const pixelToMeter = (pixels) => {
+                const ratio = 0.15;
+                return (pixels * ratio).toFixed(2);  // 保持兩位小數的精確度
             };
 
-            // 繪製圓形路徑
-            const getCirclePath = (anchor, distance) => {
-                return `M ${anchor.x} ${anchor.y} m -${distance}, 0 a ${distance},${distance} 0 1,0 ${distance*2},0 a ${distance},${distance} 0 1,0 -${distance*2},0`;
+            // 格式化狀態文字
+            const formatStatus = (value, unit = '') => {
+                return `${value}${unit} | ${value}${unit}`;
+            };
+
+            // 計算兩點之間的距離
+            const getDistance = (p1, p2) => {
+                const dx = p1.x - p2.x;
+                const dy = p1.y - p2.y;
+                return Math.sqrt(dx * dx + dy * dy);
             };
 
             // 根據距離決定顏色
             const getDistanceColor = (distance) => {
-                const maxGoodDistance = 200;  // 增加良好範圍的閾值
+                const maxGoodDistance = 200;  // 30米
                 if (distance <= maxGoodDistance) {
                     return "rgba(0,255,0,0.2)";  // 綠色 - 良好範圍
                 } else if (distance <= maxGoodDistance * 1.5) {
@@ -170,6 +178,11 @@
                 } else {
                     return "rgba(255,0,0,0.2)";  // 紅色 - 較差範圍
                 }
+            };
+
+            // 繪製圓形路徑
+            const getCirclePath = (anchor, distance) => {
+                return `M ${anchor.x} ${anchor.y} m -${distance}, 0 a ${distance},${distance} 0 1,0 ${distance*2},0 a ${distance},${distance} 0 1,0 -${distance*2},0`;
             };
 
             // 計算定位誤差
@@ -333,9 +346,9 @@
                                             />
                                             {/* 距離文字背景 */}
                                             <rect
-                                                x={(anchor.x + tag.x) / 2 - 20}
+                                                x={(anchor.x + tag.x) / 2 - 25}
                                                 y={(anchor.y + tag.y) / 2 - 10}
-                                                width="40"
+                                                width="50"
                                                 height="20"
                                                 fill="white"
                                                 rx="4"
@@ -348,7 +361,7 @@
                                                 fill="black"
                                                 textAnchor="middle"
                                             >
-                                                {getDistance(anchor, tag).toFixed(0)}px
+                                                {pixelToMeter(getDistance(anchor, tag))}m
                                             </text>
                                         </g>
                                     ))}
@@ -371,7 +384,7 @@
                             </div>
                             <div className="mt-4 space-y-2 text-sm">
                                 <p>Current Status | 當前狀態：{controlMode === 'manual' ? 'Manual Control | 手動控制' : (tagPosition === 'inside' ? 'Inside Range | 基站範圍內' : 'Outside Range | 基站範圍外')}</p>
-                                <p>Average Distance | 平均距離：{getPositioningError().toFixed(1)}px</p>
+                                <p>Average Distance | 平均距離：{pixelToMeter(getPositioningError())}m</p>
                                 {method === 'two' && (
                                     <p>Two-Anchor Positioning | 兩基站定位：
                                         {tagPosition === 'inside' ? 
