@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UWB Positioning Visualization | UWB 定位視覺化展示</title>
+
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 引入 React 和 ReactDOM -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+
+    <!-- 引入 Babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const Card = ({ children, className }) => (
+            <div className={`bg-white rounded-lg shadow-lg overflow-hidden ${className}`}>
+                {children}
+            </div>
+        );
+
+        const CardHeader = ({ children }) => (
+            <div className="p-6 border-b">{children}</div>
+        );
+
+        const CardTitle = ({ children }) => (
+            <h2 className="text-2xl font-bold mb-4">{children}</h2>
+        );
+
+        const CardContent = ({ children }) => (
+            <div className="p-6">{children}</div>
+        );
+
+        const Select = ({ value, onChange, children }) => (
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full p-2 border rounded-md bg-white"
+            >
+                {children}
+            </select>
+        );
+
+        const Slider = ({ value, onChange, min, max, step }) => (
+            <input
+                type="range"
+                value={value}
+                onChange={(e) => onChange(parseFloat(e.target.value))}
+                min={min}
+                max={max}
+                step={step}
+                className="w-full"
+            />
+        );
+
+        const UWBVisualization = () => {
+            const [method, setMethod] = React.useState('two');
+            const [time, setTime] = React.useState(0);
+            const [tagPosition, setTagPosition] = React.useState('inside');
+            const [radius, setRadius] = React.useState(50);
+
+            // 定義基站位置配置
+            const anchorConfigs = {
+                two: [
+                    { x: 150, y: 200 },
+                    { x: 250, y: 200 },
+                ],
+                three: [
+                    { x: 150, y: 250 },
+                    { x: 250, y: 250 },
+                    { x: 200, y: 150 },
+                ],
+                many: [
+                    { x: 150, y: 250 },
+                    { x: 250, y: 250 },
+                    { x: 200, y: 150 },
+                    { x: 150, y: 150 },
+                ]
+            };
+
+            // 動畫效果
+            React.useEffect(() => {
+                const timer = setInterval(() => {
+                    setTime(prev => (prev + 1) % 100);
+                }, 50);
+                return () => clearInterval(timer);
+            }, []);
+
+            // 計算Tag位置
+            const getTagPosition = () => {
+                const centerX = 200;
+                const centerY = 200;
+
+                if (tagPosition === 'inside') {
+                    return {
+                        x: centerX + 30 * Math.cos(time * 0.1),
+                        y: centerY + 30 * Math.sin(time * 0.1)
+                    };
+                } else {
+                    return {
+                        x: centerX + radius * Math.cos(time * 0.1),
+                        y: centerY + radius * Math.sin(time * 0.1)
+                    };
+                }
+            };
+
+            const tag = getTagPosition();
+
+            // 計算距離
+            const getDistance = (p1, p2) => {
+                return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+            };
+
+            // 繪製圓形路徑
+            const getCirclePath = (anchor, distance) => {
+                return `M ${anchor.x} ${anchor.y} m -${distance}, 0 a ${distance},${distance} 0 1,0 ${distance*2},0 a ${distance},${distance} 0 1,0 -${distance*2},0`;
+            };
+
+            // 計算定位誤差
+            const getPositioningError = () => {
+                const distances = anchorConfigs[method].map(anchor => getDistance(anchor, tag));
+                return distances.reduce((acc, curr) => acc + curr, 0) / distances.length;
+            };
+
+            // 根據距離決定顏色
+            const getDistanceColor = (distance) => {
+                const maxGoodDistance = 100;
+                if (distance <= maxGoodDistance) {
+                    return "rgba(0,255,0,0.2)";
+                } else if (distance <= maxGoodDistance * 1.5) {
+                    return "rgba(255,165,0,0.2)";
+                } else {
+                    return "rgba(255,0,0,0.2)";
+                }
+            };
+
+            return (
+                <div className="container mx-auto px-4 py-8">
+                    <Card className="max-w-4xl mx-auto">
+                        <CardHeader>
+                            <CardTitle>UWB Positioning Demo (Inside/Outside Range) | UWB 定位演示（內部/外部範圍）</CardTitle>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Positioning Method | 定位方法
+                                    </label>
+                                    <Select value={method} onChange={setMethod}>
+                                        <option value="two">Two Anchors | 兩個基站</option>
+                                        <option value="three">Three Anchors | 三個基站</option>
+                                        <option value="many">Multiple Anchors | 多個基站</option>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Tag Position | 標籤位置
+                                    </label>
+                                    <Select value={tagPosition} onChange={setTagPosition}>
+                                        <option value="inside">Inside Range | 範圍內</option>
+                                        <option value="outside">Outside Range | 範圍外</option>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Coverage Radius | 覆蓋半徑: {radius}
+                                    </label>
+                                    <Slider
+                                        value={radius}
+                                        onChange={setRadius}
+                                        min={30}
+                                        max={100}
+                                        step={1}
+                                    />
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="relative w-full h-96 bg-slate-50 rounded-lg">
+                                <svg width="100%" height="100%" viewBox="0 0 400 400">
+                                    {/* 覆蓋區域 */}
+                                    <polygon
+                                        points={anchorConfigs[method].map(p => `${p.x},${p.y}`).join(' ')}
+                                        fill="rgba(0,0,255,0.1)"
+                                        stroke="blue"
+                                        strokeWidth="1"
+                                        strokeDasharray="5,5"
+                                    />
+
+                                    {/* 繪製基站和覆蓋範圍 */}
+                                    {anchorConfigs[method].map((anchor, i) => (
+                                        <g key={i}>
+                                            {/* 基站點 */}
+                                            <circle
+                                                cx={anchor.x}
+                                                cy={anchor.y}
+                                                r="6"
+                                                fill="blue"
+                                            />
+                                            <text
+                                                x={anchor.x + 10}
+                                                y={anchor.y - 10}
+                                                className="text-xs"
+                                            >
+                                                Anchor {i+1}
+                                            </text>
+                                            {/* 距離圓 */}
+                                            <path
+                                                d={getCirclePath(anchor, getDistance(anchor, tag))}
+                                                fill="none"
+                                                stroke={getDistanceColor(getDistance(anchor, tag))}
+                                                strokeWidth="2"
+                                            />
+                                            {/* 距離線 */}
+                                            <line
+                                                x1={anchor.x}
+                                                y1={anchor.y}
+                                                x2={tag.x}
+                                                y2={tag.y}
+                                                stroke="rgba(0,0,255,0.1)"
+                                                strokeWidth="1"
+                                                strokeDasharray="5,5"
+                                            />
+                                            {/* 距離文字 */}
+                                            <text
+                                                x={(anchor.x + tag.x) / 2}
+                                                y={(anchor.y + tag.y) / 2}
+                                                className="text-xs"
+                                                fill="gray"
+                                            >
+                                                {getDistance(anchor, tag).toFixed(0)}px
+                                            </text>
+                                        </g>
+                                    ))}
+                                    {/* 繪製Tag */}
+                                    <circle
+                                        cx={tag.x}
+                                        cy={tag.y}
+                                        r="8"
+                                        fill={tagPosition === 'inside' ? "red" : "orange"}
+                                    />
+                                    <text
+                                        x={tag.x + 15}
+                                        y={tag.y - 15}
+                                        className="text-xs"
+                                    >
+                                        Tag
+                                    </text>
+                                </svg>
+                            </div>
+                            <div className="mt-4 space-y-2 text-sm">
+                                <p>Current Status | 當前狀態：{tagPosition === 'inside' ? 'Inside Range | 基站範圍內' : 'Outside Range | 基站範圍外'}</p>
+                                <p>Average Distance | 平均距離：{getPositioningError().toFixed(1)}px</p>
+                                {method === 'two' && (
+                                    <p>Two-Anchor Positioning | 兩基站定位：
+                                        {tagPosition === 'inside' ? 
+                                            'May have two solutions | 可能有兩個解' : 
+                                            'Positioning accuracy decreases when outside range, solution may be inaccurate | 在範圍外時定位精度下降，解可能不準確'}
+                                    </p>
+                                )}
+                                {method === 'three' && (
+                                    <p>Three-Anchor Positioning | 三基站定位：
+                                        {tagPosition === 'inside' ? 
+                                            'Unique solution available | 有唯一解' : 
+                                            'Solution may be less accurate outside range | 在範圍外時解可能不太準確'}
+                                    </p>
+                                )}
+                                {method === 'many' && (
+                                    <p>Multi-Anchor Positioning | 多基站定位：
+                                        {tagPosition === 'inside' ? 
+                                            'Higher accuracy with redundant measurements | 冗餘測量提高精度' : 
+                                            'Better accuracy even outside range | 即使在範圍外也有較好的精度'}
+                                    </p>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            );
+        };
+
+        // 渲染應用
+        ReactDOM.render(<UWBVisualization />, document.getElementById('root'));
+    </script>
+</body>
+</html>
