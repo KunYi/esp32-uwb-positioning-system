@@ -1,8 +1,8 @@
 #include "dw3000.h"
 
 /* RX for Tag */
-#define PAN_ID    (0xCA, 0xDE)
-#define TAG_SRC   ('T', '1')
+const uint8_t PAN_ID[] = { 0xCA, 0xDE };     // PAN_ID
+const uint8_t TAG_SRC[] = { 'T', '1' };      // Tag ID
 
 /* Anchor List Settings */
 #define NUM_ANCHORS 3  // 設定 Anchor 的數量
@@ -90,8 +90,8 @@ static dwt_config_t config = {
     DWT_PDOA_M0       /* PDOA mode off */
 };
 
-static uint8_t tx_poll_msg[12] = {0x41, 0x88, 0, PAN_ID, TAG_SRC, 0, 0, 0xE0, 0, 0};
-static uint8_t rx_resp_msg[20] = {0x41, 0x88, 0, PAN_ID, 0, 0, TAG_SRC, 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint8_t tx_poll_msg[] = {0x41, 0x88, 0, PAN_ID[0], PAN_ID[1], TAG_SRC[0], TAG_SRC[1], 0, 0, 0xE0, 0, 0};
+static uint8_t rx_resp_msg[] = {0x41, 0x88, 0, PAN_ID[0], PAN_ID[1], 0, 0, TAG_SRC[0], TAG_SRC[1], 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static uint8_t frame_seq_nb = 0;
 static uint8_t rx_buffer[20];
 static uint32_t status_reg = 0;
@@ -299,7 +299,7 @@ static bool isExpectedFrame(const uint8_t *frame, const uint32_t len) {
 /* Function to convert all anchor data to JSON string */
 void formatPositionDataToJson(char* jsonBuffer, size_t bufferSize) {
     // Start the JSON object with tag ID
-    char tagId[3] = {TAG_SRC, 0};  // Convert TAG_SRC macro to string
+    char tagId[3] = {TAG_SRC[0], TAG_SRC[1], 0};  // Convert TAG_SRC array to string
     snprintf(jsonBuffer, bufferSize, "{\"tag\":\"%s\",\"anchors\":[", tagId);
 
     // Add each active anchor's data

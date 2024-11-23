@@ -2,9 +2,9 @@
 #include "SPI.h"
 
 /* TX for Anchor */
-#define PAN_ID      (0xCA, 0xDE)
-#define ANCHOR_SRC  ('A', '1')
-#define ANCHOR_DST  ('T', '1')
+const uint8_t PAN_ID[] = { 0xCA, 0xDE };     // PAN_ID
+const uint8_t ANCHOR_SRC[] = { 'A', '1' };   // Anchor ID
+const uint8_t TAG_DST[] = { 'T', '1' };      // Tag ID
 
 extern SPISettings _fastSPI;
 
@@ -38,8 +38,8 @@ static dwt_config_t config = {
     DWT_PDOA_M0       /* PDOA mode off */
 };
 
-static uint8_t rx_poll_msg[] = {0x41, 0x88, 0, PAN_ID, ANCHOR_SRC, ANCHOR_DST, 0xE0, 0, 0};
-static uint8_t tx_resp_msg[] = {0x41, 0x88, 0, PAN_ID, ANCHOR_DST, ANCHOR_SRC, 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint8_t rx_poll_msg[] = {0x41, 0x88, 0, PAN_ID[0], PAN_ID[1], TAG_DST[0], TAG_DST[1], ANCHOR_SRC[0], ANCHOR_SRC[1], 0xE0, 0, 0};
+static uint8_t tx_resp_msg[] = {0x41, 0x88, 0, PAN_ID[0], PAN_ID[1], ANCHOR_SRC[0], ANCHOR_SRC[1], TAG_DST[0], TAG_DST[1], 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static uint8_t frame_seq_nb = 0;
 static uint8_t rx_buffer[20];
 static uint32_t status_reg = 0;
