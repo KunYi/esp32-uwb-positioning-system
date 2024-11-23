@@ -22,14 +22,38 @@ This project was developed using [Windsurf](https://codeium.com/windsurf), the w
   - Real-time distance tracking
   - Position calculation using trilateration
   - Minimum 2 anchors required for operation
+  - Maximum valid distance: 8.0 meters
+  - Anchor data timeout: 5 seconds
 
 - **Network Communication**
-  - WiFi connectivity (optional)
-  - UDP broadcast support
+  - Optional WiFi connectivity (can be enabled when needed)
+  - UDP broadcast support (when WiFi enabled)
   - JSON-formatted data output
   - Rate-limited broadcasts (100ms interval)
 
 ### Data Management
+- **System Parameters**
+  - Maximum anchors: 10
+  - Minimum anchors for positioning: 2
+  - Maximum valid distance: 8.0 meters
+  - Anchor data timeout: 5 seconds
+  - UDP broadcast interval: 100ms
+  - JSON buffer size: 512 bytes (for multiple anchors)
+
+- **Tag/Anchor Configuration**
+  ```cpp
+  // Tag Configuration (in range_rx.ino)
+  const uint8_t TAG_ADDR[] = { 'T', '1' };      // Tag Address
+
+  // Anchor Configuration (in range_rx.ino)
+  #define NUM_ANCHORS 3  // Number of anchors
+  static const char ANCHOR_LIST[NUM_ANCHORS][2] = {
+      {'A', '1'},  // Anchor 1
+      {'A', '2'},  // Anchor 2
+      {'A', '3'}   // Anchor 3
+  };
+  ```
+
 - **Anchor Data Structure**
   ```json
   {
@@ -130,13 +154,20 @@ Important Notes:
 1. Configure Anchors:
    ```cpp
    // In range_tx.ino
-   #define ANCHOR_ID ('A', '1')  // Change for each anchor
+   const uint8_t ANCHOR_ADDR[] = { 'A', '1' };   // Change for each anchor (A1, A2, A3, etc.)
    ```
 
 2. Configure Tag:
    ```cpp
    // In range_rx.ino
-   #define TAG_SRC ('T', '1')
+   const uint8_t TAG_ADDR[] = { 'T', '1' };  // Tag Address
+   // Configure anchor list
+   #define NUM_ANCHORS 3  // Set number of anchors
+   static const char ANCHOR_LIST[NUM_ANCHORS][2] = {
+       {'A', '1'},  // Anchor 1
+       {'A', '2'},  // Anchor 2
+       {'A', '3'}   // Anchor 3
+   };
    ```
 
 3. WiFi Settings (Optional):

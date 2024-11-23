@@ -39,26 +39,49 @@ Ultra-Wideband technology offers several advantages over other indoor positionin
   * CPU: Dual-core Xtensa LX6, up to 240MHz
   * RAM: 520KB SRAM
   * Flash: 4MB
-  
+
 - **UWB Module**: DW3000
   * Frequency Band: 6.5GHz and 8GHz
   * Channel Bandwidth: 500MHz and 900MHz
   * Data Rate: Up to 6.8Mbps
   * Ranging Accuracy: ~10cm
-  
-- **Power Requirements**
-  * Operating Voltage: 3.3V
-  * Current Consumption:
-    - Sleep Mode: <1mA
-    - Active Mode: 130mA
-    - Peak During UWB Transmission: 280mA
+
+- **System Parameters**
+  * Maximum Anchors: 10
+  * Minimum Anchors for Positioning: 2
+  * Maximum Valid Distance: 8.0m
+  * Anchor Data Timeout: 5s
+  * UDP Broadcast Interval: 100ms
+  * JSON Buffer Size: 512 bytes (for multiple anchors)
+
+- **Default Configuration**
+  ```cpp
+  // Tag Configuration (range_rx.ino)
+  const uint8_t TAG_ADDR[] = { 'T', '1' };      // Tag Address
+  // Configure anchor list for Tag
+  #define NUM_ANCHORS 3  // Number of anchors
+  static const char ANCHOR_LIST[NUM_ANCHORS][2] = {
+      {'A', '1'},  // Anchor 1
+      {'A', '2'},  // Anchor 2
+      {'A', '3'}   // Anchor 3
+  };
+
+  // Anchor Configuration (range_tx.ino)
+  const uint8_t ANCHOR_ADDR[] = { 'A', '1' };   // Change for each anchor
+  ```
+
+- **Network Features**
+  * Optional WiFi Connectivity
+  * UDP Broadcast (when WiFi enabled)
+  * JSON Data Format
+  * Configurable Update Rate
 
 #### Performance Metrics
 - **Positioning Accuracy**:
   * 2D Mode: 10-20cm
   * 3D Mode: 20-30cm
   * Update Rate: 10Hz (configurable)
-  
+
 - **Range Limitations**:
   * Maximum Range: 8.0m (configurable)
   * Minimum Range: 0.2m
@@ -220,26 +243,49 @@ ESP32 UWB 室內定位系統是一個開源專案，結合超寬頻（UWB）技�
   * CPU：雙核 Xtensa LX6，最高 240MHz
   * RAM：520KB SRAM
   * 快閃記憶體：4MB
-  
+
 - **UWB 模組**: DW3000
   * 頻段：6.5GHz 和 8GHz
   * 通道頻寬：500MHz 和 900MHz
   * 數據率：最高 6.8Mbps
   * 測距精度：約 10 厘米
-  
-- **電源需求**
-  * 工作電壓：3.3V
-  * 電流消耗：
-    - 睡眠模式：<1mA
-    - 工作模式：130mA
-    - UWB 傳輸峰值：280mA
+
+- **系統參數**
+  * 最大錨點數：10
+  * 最少錨點數（定位）：2
+  * 最大有效距離：8.0 米
+  * 錨點數據超時：5 秒
+  * UDP 廣播間隔：100 毫秒
+  * JSON Buffer Size: 512 bytes (for multiple anchors)
+
+- **預設配置**
+  ```cpp
+  // 標籤配置 (range_rx.ino)
+  const uint8_t TAG_ADDR[] = { 'T', '1' };      // 標籤地址
+  // Configure anchor list for Tag
+  #define NUM_ANCHORS 3  // Number of anchors
+  static const char ANCHOR_LIST[NUM_ANCHORS][2] = {
+      {'A', '1'},  // 錨點 1
+      {'A', '2'},  // 錨點 2
+      {'A', '3'}   // 錨點 3
+  };
+
+  // 錨點配置 (range_tx.ino)
+  const uint8_t ANCHOR_ADDR[] = { 'A', '1' };   // Change for each anchor
+  ```
+
+- **網絡功能**
+  * 可選 WiFi 連接
+  * UDP 廣播（當 WiFi 啟用）
+  * JSON 數據格式
+  * 可配置更新率
 
 #### 性能指標
 - **定位精度**：
   * 2D 模式：10-20 厘米
   * 3D 模式：20-30 厘米
   * 更新率：10Hz（可配置）
-  
+
 - **範圍限制**：
   * 最大範圍：8.0 米（可配置）
   * 最小範圍：0.2 米

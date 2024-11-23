@@ -71,7 +71,7 @@ static unsigned long lastBroadcastTime = 0;  // Last UDP broadcast timestamp
 #define RESP_RX_TIMEOUT_UUS 400
 
 /* JSON buffer size */
-#define JSON_BUFFER_SIZE 128
+#define JSON_BUFFER_SIZE 512
 
 /* Default communication configuration. We use default non-STS DW mode. */
 static dwt_config_t config = {
