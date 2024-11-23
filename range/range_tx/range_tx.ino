@@ -3,8 +3,8 @@
 
 /* TX for Anchor */
 const uint8_t PAN_ID[] = { 0xCA, 0xDE };     // PAN_ID
-const uint8_t ANCHOR_SRC[] = { 'A', '1' };   // Anchor ID
-const uint8_t TAG_DST[] = { 'T', '1' };      // Tag ID
+const uint8_t ANCHOR_ADDR[] = { 'A', '1' };   // Anchor Address
+const uint8_t TAG_ADDR[] = { 'T', '1' };      // Tag Address
 
 extern SPISettings _fastSPI;
 
@@ -38,8 +38,34 @@ static dwt_config_t config = {
     DWT_PDOA_M0       /* PDOA mode off */
 };
 
-static uint8_t rx_poll_msg[] = {0x41, 0x88, 0, PAN_ID[0], PAN_ID[1], TAG_DST[0], TAG_DST[1], ANCHOR_SRC[0], ANCHOR_SRC[1], 0xE0, 0, 0};
-static uint8_t tx_resp_msg[] = {0x41, 0x88, 0, PAN_ID[0], PAN_ID[1], ANCHOR_SRC[0], ANCHOR_SRC[1], TAG_DST[0], TAG_DST[1], 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+/* SS-TWR Message Format
+ * Poll message from Tag to Anchor:
+ * +-----------+--------+----------+-----------+------------+------------+------+--------+
+ * | Byte 0-1  | Byte 2 | Byte 3-4 | Byte 5-6  | Byte 7-8   | Byte 9    | 10-11|
+ * +-----------+--------+----------+-----------+------------+------------+------+--------+
+ * | 0x41, 0x88| Seq    | PAN ID   | Tag ADDR  | Anch ADDR  | 0xE0      | RES  |
+ * +-----------+--------+----------+-----------+------------+------------+------+--------+
+ */
+/* Response message from Anchor to Tag:
+ * +-----------+--------+----------+-----------+------------+------------+----------------+----------------+--------+
+ * | Byte 0-1  | Byte 2 | Byte 3-4 | Byte 5-6  | Byte 7-8   | Byte 9    | Byte 10-13    | Byte 14-17    | 18-19 |
+ * +-----------+--------+----------+-----------+------------+------------+----------------+----------------+--------+
+ * | 0x41, 0x88| Seq    | PAN ID   | Anch ADDR | Tag ADDR   | 0xE1      | Poll RX TS    | Resp TX TS    | RES   |
+ * +-----------+--------+----------+-----------+------------+------------+----------------+----------------+--------+
+ *
+ * Field Description:
+ * - Frame Control (0x41, 0x88): IEEE 802.15.4 frame control
+ * - Seq: Frame sequence number
+ * - PAN ID: Network identifier (0xCADE)
+ * - Tag/Anch ADDR: Device addresses
+ * - 0xE0/0xE1: Message type (Poll/Response)
+ * - Poll RX TS: Timestamp of Poll message reception
+ * - Resp TX TS: Timestamp of Response message transmission
+ * - RES: Reserved bytes
+ */
+static uint8_t rx_poll_msg[] = {0x41, 0x88, 0, PAN_ID[0], PAN_ID[1], TAG_ADDR[0], TAG_ADDR[1], ANCHOR_ADDR[0], ANCHOR_ADDR[1], 0xE0, 0, 0};
+static uint8_t tx_resp_msg[] = {0x41, 0x88, 0, PAN_ID[0], PAN_ID[1], ANCHOR_ADDR[0], ANCHOR_ADDR[1], TAG_ADDR[0], TAG_ADDR[1], 0xE1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
 static uint8_t frame_seq_nb = 0;
 static uint8_t rx_buffer[20];
 static uint32_t status_reg = 0;
