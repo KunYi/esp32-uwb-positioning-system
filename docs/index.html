@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UWB Positioning Visualization | UWB 定位視覺化展示</title>
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" as="script">
+    <link rel="preload" href="https://unpkg.com/react@18/umd/react.development.js" as="script">
+    <link rel="preload" href="https://unpkg.com/react-dom@18/umd/react-dom.development.js" as="script">
 
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,12 +29,9 @@
                 fontCache: 'global'
             },
             startup: {
-                typeset: false,
-                ready: function() {
+                typeset: true,
+                ready: () => {
                     MathJax.startup.defaultReady();
-                    MathJax.startup.promise.then(() => {
-                        console.log('MathJax initial typesetting complete');
-                    });
                 }
             },
             options: {
@@ -39,7 +39,7 @@
             }
         };
     </script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
     <style>
         .math-display {
             margin: 1em 0;
@@ -98,23 +98,29 @@
             const containerRef = React.useRef(null);
 
             React.useEffect(() => {
-                if (containerRef.current) {
-                    if (!tex) return;
+                const renderMath = async () => {
+                    if (!containerRef.current || !tex) return;
 
-                    containerRef.current.innerHTML = displayMode ? `$$${tex}$$` : `$${tex}$`;
-
-                    if (window.MathJax) {
-                        try {
-                            window.MathJax.typesetPromise([containerRef.current]).catch(err => {
-                                console.error('MathJax typesetting error:', err);
-                                containerRef.current.textContent = tex;
-                            });
-                        } catch (err) {
-                            console.error('MathJax error:', err);
+                    // 等待 MathJax 完全加載
+                    if (!window.MathJax || !window.MathJax.typesetPromise) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        if (!window.MathJax || !window.MathJax.typesetPromise) {
+                            console.warn('MathJax not loaded properly');
                             containerRef.current.textContent = tex;
+                            return;
                         }
                     }
-                }
+
+                    try {
+                        containerRef.current.innerHTML = displayMode ? `$$${tex}$$` : `$${tex}$`;
+                        await window.MathJax.typesetPromise([containerRef.current]);
+                    } catch (err) {
+                        console.error('MathJax rendering error:', err);
+                        containerRef.current.textContent = tex;
+                    }
+                };
+
+                renderMath();
             }, [tex, displayMode]);
 
             return <div ref={containerRef} className={`${className} math-display`}></div>;
