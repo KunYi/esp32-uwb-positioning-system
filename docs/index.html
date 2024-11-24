@@ -510,28 +510,357 @@
                             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                                 <h3 className="font-bold mb-2">Positioning Principles | 定位原理</h3>
                                 <div className="space-y-4">
+                                    {/* TWR Explanation Section */}
+                                    <div className="mt-8">
+                                        <h4 className="font-bold mb-2">Ranging Methods | 測距方法</h4>
+
+                                        {/* SS-TWR */}
+                                        <div className="mb-6">
+                                            <h5 className="font-semibold mb-2">SS-TWR (Single-Sided Two Way Ranging)</h5>
+                                            <p className="mb-4">
+                                                SS-TWR is a basic two-way ranging method that measures the round-trip time between two devices.
+                                                <br/><br/>
+                                                SS-TWR 是一種基本的雙向測距方法，用於測量兩個設備之間的往返時間。
+                                            </p>
+                                            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                                <h6 className="font-semibold mb-2">Calculation Principle | 計算原理</h6>
+                                                <div className="space-y-2">
+                                                    <p>Time of Flight calculation | 飛行時間計算：</p>
+                                                    <MathDisplay tex="T_{prop} = \frac{T_{round} - T_{reply}}{2}" displayMode={true} />
+                                                    <p className="text-sm text-gray-600">
+                                                        Where | 其中：
+                                                        <br/>• T<sub>prop</sub>: Time of flight | 飛行時間
+                                                        <br/>• T<sub>round</sub> = T<sub>4</sub> - T<sub>1</sub>: Round trip time | 往返總時間
+                                                        <br/>• T<sub>reply</sub> = T<sub>3</sub> - T<sub>2</sub>: Reply delay | 回覆延遲時間
+                                                    </p>
+                                                    <div className="mt-2">
+                                                        <p className="text-sm text-gray-600">
+                                                            <span className="font-semibold">Key Points | 重點說明：</span>
+                                                            <br/>• No clock synchronization required - each device only measures its own time differences | 不需要時鐘同步 - 每個設備只測量自己的時間差
+                                                            <br/>• Initiator measures (T<sub>4</sub> - T<sub>1</sub>) and Responder measures (T<sub>3</sub> - T<sub>2</sub>) | 發起方測量 (T<sub>4</sub> - T<sub>1</sub>)，響應方測量 (T<sub>3</sub> - T<sub>2</sub>)
+                                                            <br/>• Clock drift between devices may still affect accuracy | 設備間的時鐘漂移仍可能影響精度
+                                                            <br/>• Accuracy depends on reply delay stability | 精度取決於回覆延遲的穩定性
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="relative h-60 bg-white rounded-lg p-4 mb-2">
+                                                <svg className="w-full h-full" viewBox="0 0 400 160">
+                                                    {/* Initiator and Responder */}
+                                                    <circle cx="50" cy="80" r="10" fill="#4B5563"/>
+                                                    <circle cx="350" cy="80" r="10" fill="#4B5563"/>
+                                                    <text x="50" y="14" textAnchor="middle" className="text-sm">Initiator</text>
+                                                    <text x="350" y="14" textAnchor="middle" className="text-sm">Responder</text>
+
+                                                    {/* Vertical timelines */}
+                                                    <line x1="50" y1="20" x2="50" y2="140" stroke="#666" strokeWidth="1" strokeDasharray="2,2"/>
+                                                    <line x1="350" y1="20" x2="350" y2="140" stroke="#666" strokeWidth="1" strokeDasharray="2,2"/>
+
+                                                    {/* Time labels with connecting lines */}
+                                                    <g className="time-labels">
+                                                        {/* T1 */}
+                                                        <text x="30" y="40" className="text-xs" textAnchor="end">T1</text>
+                                                        <line x1="35" y1="37" x2="50" y2="37" stroke="#666" strokeWidth="1"/>
+                                                        {/* T2 */}
+                                                        <text x="370" y="60" className="text-xs" textAnchor="start">T2</text>
+                                                        <line x1="350" y1="57" x2="365" y2="57" stroke="#666" strokeWidth="1"/>
+                                                        {/* T3 */}
+                                                        <text x="370" y="100" className="text-xs" textAnchor="start">T3</text>
+                                                        <line x1="350" y1="97" x2="365" y2="97" stroke="#666" strokeWidth="1"/>
+                                                        {/* T4 */}
+                                                        <text x="30" y="120" className="text-xs" textAnchor="end">T4</text>
+                                                        <line x1="35" y1="117" x2="50" y2="117" stroke="#666" strokeWidth="1"/>
+                                                    </g>
+
+                                                    {/* Processing time indicator */}
+                                                    <line x1="350" y1="57" x2="350" y2="97" stroke="#666" strokeWidth="4" opacity="0.2"/>
+                                                    <text x="370" y="80" className="text-xs" fill="#666">Processing</text>
+
+                                                    {/* Animated arrows */}
+                                                    <g className="ranging-animation">
+                                                        {/* Poll message (T1->T2) */}
+                                                        <g>
+                                                            <path d="M60,37 L340,57" stroke="#10B981" strokeWidth="2" strokeDasharray="290" strokeDashoffset="290" opacity="0">
+                                                                <animate id="pollLineShow" attributeName="opacity" values="0;1" dur="0.1s" begin="0s;resetAnim.end" fill="freeze"/>
+                                                                <animate id="pollAnim" attributeName="stroke-dashoffset" from="290" to="0" dur="1.5s" begin="pollLineShow.end" repeatCount="1"/>
+                                                                <animate attributeName="stroke-dashoffset" to="290" dur="0.1s" begin="resetAnim.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="processAnim.begin" fill="freeze"/>
+                                                            </path>
+                                                            {/* Moving arrow head for Poll */}
+                                                            <path d="M0,0 l-8,4 v-8 z" fill="#10B981" opacity="0">
+                                                                <animate attributeName="opacity" values="0;1" dur="0.1s" begin="pollLineShow.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="processAnim.begin" fill="freeze"/>
+                                                                <animateMotion dur="1.5s" begin="pollLineShow.end" repeatCount="1"
+                                                                    path="M60,37 L340,57" rotate="auto"/>
+                                                            </path>
+                                                        </g>
+
+                                                        {/* Processing indication */}
+                                                        <rect x="345" y="57" width="10" height="40" fill="#666" opacity="0">
+                                                            <animate id="processAnim" attributeName="opacity" values="0.2;0.5;0.2" dur="0.5s" begin="pollAnim.end" repeatCount="2"/>
+                                                        </rect>
+
+                                                        {/* Response message (T3->T4) */}
+                                                        <g>
+                                                            <path d="M340,97 L60,117" stroke="#DC2626" strokeWidth="2" strokeDasharray="290" strokeDashoffset="290" opacity="0">
+                                                                <animate id="responseLineShow" attributeName="opacity" values="0;1" dur="0.1s" begin="processAnim.end" fill="freeze"/>
+                                                                <animate id="responseAnim" attributeName="stroke-dashoffset" from="290" to="0" dur="1.5s" begin="responseLineShow.end" repeatCount="1"/>
+                                                                <animate attributeName="stroke-dashoffset" to="290" dur="0.1s" begin="resetAnim.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="resetAnim.begin" fill="freeze"/>
+                                                            </path>
+                                                            {/* Moving arrow head for Response */}
+                                                            <path d="M0,0 l-8,4 v-8 z" fill="#DC2626" opacity="0">
+                                                                <animate attributeName="opacity" values="0;1" dur="0.1s" begin="responseLineShow.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="resetAnim.begin" fill="freeze"/>
+                                                                <animateMotion dur="1.5s" begin="responseLineShow.end" repeatCount="1"
+                                                                    path="M340,97 L60,117" rotate="auto"/>
+                                                            </path>
+                                                        </g>
+
+                                                        {/* Arrival indicators */}
+                                                        <circle cx="350" cy="57" r="3" fill="#10B981" opacity="0">
+                                                            <animate attributeName="opacity" values="0;1" dur="0.1s" begin="pollAnim.end" fill="freeze"/>
+                                                            <animate attributeName="opacity" values="1;0" dur="0.1s" begin="processAnim.end" fill="freeze"/>
+                                                        </circle>
+                                                        <circle cx="50" cy="117" r="3" fill="#DC2626" opacity="0">
+                                                            <animate attributeName="opacity" values="0;1" dur="0.1s" begin="responseAnim.end" fill="freeze"/>
+                                                            <animate attributeName="opacity" values="1;0" dur="0.1s" begin="resetAnim.begin" fill="freeze"/>
+                                                        </circle>
+
+                                                        {/* Animation reset trigger */}
+                                                        <animate id="resetAnim" attributeName="opacity" from="1" to="1" dur="0.1s" begin="responseAnim.end+0.5s" repeatCount="1"/>
+                                                    </g>
+
+                                                    {/* Message labels */}
+                                                    <text x="200" y="45" textAnchor="middle" className="text-xs" fill="#10B981">Poll</text>
+                                                    <text x="200" y="102" textAnchor="middle" className="text-xs" fill="#DC2626">Response</text>
+                                                </svg>
+                                            </div>
+                                            <div className="text-sm space-y-2">
+                                                <p>Steps | 步驟：</p>
+                                                <ol className="list-decimal list-inside space-y-1 pl-4">
+                                                    <li>Initiator sends poll message (T1) | 發起者發送輪詢訊息</li>
+                                                    <li>Responder receives poll (T2) | 應答者接收輪詢訊息</li>
+                                                    <li>Responder sends response (T3) | 應答者發送回應訊息</li>
+                                                    <li>Initiator receives response (T4) | 發起者接收回應訊息</li>
+                                                </ol>
+                                                <div className="katex-formula">
+                                                    T<sub>prop</sub> = (T<sub>round</sub> - T<sub>reply</sub>)/2
+                                                </div>
+                                                <p className="text-xs text-gray-600">
+                                                    Time of flight calculation | 飛行時間計算
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* DS-ATWR */}
+                                        <div className="mb-8">
+                                            <h5 className="font-bold mb-2">DS-ATWR (Double-Sided Asymmetric Two Way Ranging)</h5>
+                                            <p className="mb-4">
+                                                DS-ATWR (Double-Sided Asymmetric Two Way Ranging) is an improved two-way ranging technique that enhances ranging accuracy through bidirectional message exchange between two devices. Compared to SS-TWR, DS-ATWR provides better compensation for clock drift, resulting in higher precision. This method is particularly suitable for applications requiring high-precision positioning.
+                                                <br/><br/>
+                                                DS-ATWR (雙向非對稱雙程測距) 是一種改進的雙向測距技術。與 SS-TWR 相比，DS-ATWR 通過在兩個設備之間進行雙向的訊息交換，可以更好地補償時鐘漂移的影響，從而提高測距精度。這種方法特別適合於需要高精度定位的應用場景。
+                                            </p>
+                                            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                                <h6 className="font-semibold mb-2">Calculation Principle | 計算原理</h6>
+                                                <div className="space-y-2">
+                                                    <p>Time of Flight calculation | 飛行時間計算：</p>
+                                                    <MathDisplay tex="T_{prop} = \frac{(T_4 - T_1)(T_6 - T_3) - (T_3 - T_2)(T_5 - T_4)}{2(T_4 - T_1 + T_6 - T_3)}" displayMode={true} />
+                                                    <p className="text-sm text-gray-600">
+                                                        Where | 其中：
+                                                        <br/>• T<sub>prop</sub>: Time of flight | 飛行時間
+                                                        <br/>• T<sub>1</sub>, T<sub>4</sub>: First round-trip timestamps at initiator | 發起方第一次往返時間戳
+                                                        <br/>• T<sub>2</sub>, T<sub>3</sub>: First round-trip timestamps at responder | 響應方第一次往返時間戳
+                                                        <br/>• T<sub>5</sub>, T<sub>6</sub>: Second round-trip timestamps | 第二次往返時間戳
+                                                    </p>
+                                                    <div className="mt-2">
+                                                        <p className="text-sm text-gray-600">
+                                                            <span className="font-semibold">Advantages | 優勢：</span>
+                                                            <br/>• Compensates for clock drift between devices | 補償設備間的時鐘漂移
+                                                            <br/>• Reduces error from asymmetric reply delays | 減少非對稱回覆延遲造成的誤差
+                                                            <br/>• Higher accuracy than SS-TWR | 比 SS-TWR 具有更高的精度
+                                                        </p>
+                                                        <p className="text-sm text-gray-600 mt-2">
+                                                            <span className="font-semibold">How it works | 工作原理：</span>
+                                                            <br/>1. Initiator sends first poll message (T1) | 發起方發送第一個輪詢訊息 (T1)
+                                                            <br/>2. Responder receives and replies (T2, T3) | 響應方接收並回覆 (T2, T3)
+                                                            <br/>3. Initiator completes first round (T4) | 發起方完成第一輪 (T4)
+                                                            <br/>4. Second round exchange (T5, T6) | 進行第二輪交換 (T5, T6)
+                                                            <br/>5. Formula combines all timestamps to calculate accurate flight time | 公式結合所有時間戳計算準確的飛行時間
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="relative h-60 bg-white rounded-lg p-4 mb-2">
+                                                <svg className="w-full h-full" viewBox="0 0 400 160">
+                                                    {/* Initiator and Responder */}
+                                                    <circle cx="50" cy="80" r="10" fill="#4B5563"/>
+                                                    <circle cx="350" cy="80" r="10" fill="#4B5563"/>
+                                                    <text x="50" y="14" textAnchor="middle" className="text-sm">Initiator</text>
+                                                    <text x="350" y="14" textAnchor="middle" className="text-sm">Responder</text>
+
+                                                    {/* Vertical timelines */}
+                                                    <line x1="50" y1="20" x2="50" y2="140" stroke="#666" strokeWidth="1" strokeDasharray="2,2"/>
+                                                    <line x1="350" y1="20" x2="350" y2="140" stroke="#666" strokeWidth="1" strokeDasharray="2,2"/>
+
+                                                    {/* Time labels with connecting lines */}
+                                                    <g className="time-labels">
+                                                        {/* T1 */}
+                                                        <text x="30" y="40" className="text-xs" textAnchor="end">T1</text>
+                                                        <line x1="35" y1="37" x2="50" y2="37" stroke="#666" strokeWidth="1"/>
+                                                        {/* T2 */}
+                                                        <text x="370" y="60" className="text-xs" textAnchor="start">T2</text>
+                                                        <line x1="350" y1="57" x2="365" y2="57" stroke="#666" strokeWidth="1"/>
+                                                        {/* T3 */}
+                                                        <text x="370" y="100" className="text-xs" textAnchor="start">T3</text>
+                                                        <line x1="350" y1="97" x2="365" y2="97" stroke="#666" strokeWidth="1"/>
+                                                        {/* T4 */}
+                                                        <text x="30" y="120" className="text-xs" textAnchor="end">T4</text>
+                                                        <line x1="35" y1="117" x2="50" y2="117" stroke="#666" strokeWidth="1"/>
+                                                        {/* T5 */}
+                                                        <text x="30" y="140" className="text-xs" textAnchor="end">T5</text>
+                                                        <line x1="35" y1="137" x2="50" y2="137" stroke="#666" strokeWidth="1"/>
+                                                        {/* T6 */}
+                                                        <text x="370" y="140" className="text-xs" textAnchor="start">T6</text>
+                                                        <line x1="350" y1="137" x2="365" y2="137" stroke="#666" strokeWidth="1"/>
+                                                    </g>
+
+                                                    {/* Processing time indicators */}
+                                                    <line x1="350" y1="57" x2="350" y2="97" stroke="#666" strokeWidth="4" opacity="0.2"/>
+                                                    <text x="370" y="80" className="text-xs" fill="#666">Processing</text>
+
+                                                    {/* Message labels */}
+                                                    <text x="200" y="45" textAnchor="middle" className="text-xs" fill="#10B981">Poll</text>
+                                                    <text x="200" y="102" textAnchor="middle" className="text-xs" fill="#DC2626">Response</text>
+                                                    <text x="200" y="135" textAnchor="middle" className="text-xs" fill="#6366F1">Final</text>
+
+                                                    {/* Animated arrows */}
+                                                    <g className="ranging-animation">
+                                                        {/* Poll message (T1->T2) */}
+                                                        <g>
+                                                            <path d="M60,37 L340,57" stroke="#10B981" strokeWidth="2" strokeDasharray="290" strokeDashoffset="290" opacity="0">
+                                                                <animate id="pollLineShow2" attributeName="opacity" values="0;1" dur="0.1s" begin="0s;resetAnim2.end" fill="freeze"/>
+                                                                <animate id="pollAnim2" attributeName="stroke-dashoffset" from="290" to="0" dur="1.5s" begin="pollLineShow2.end" repeatCount="1"/>
+                                                                <animate attributeName="stroke-dashoffset" to="290" dur="0.1s" begin="resetAnim2.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="processAnim2.begin" fill="freeze"/>
+                                                            </path>
+                                                            {/* Moving arrow head for Poll */}
+                                                            <path d="M0,0 l-8,4 v-8 z" fill="#10B981" opacity="0">
+                                                                <animate attributeName="opacity" values="0;1" dur="0.1s" begin="pollLineShow2.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="processAnim2.begin" fill="freeze"/>
+                                                                <animateMotion dur="1.5s" begin="pollLineShow2.end" repeatCount="1"
+                                                                    path="M60,37 L340,57" rotate="auto"/>
+                                                            </path>
+                                                        </g>
+
+                                                        {/* Processing indication */}
+                                                        <rect x="345" y="57" width="10" height="40" fill="#666" opacity="0">
+                                                            <animate id="processAnim2" attributeName="opacity" values="0.2;0.5;0.2" dur="0.5s" begin="pollAnim2.end" repeatCount="2"/>
+                                                        </rect>
+
+                                                        {/* Response message (T3->T4) */}
+                                                        <g>
+                                                            <path d="M340,97 L60,117" stroke="#DC2626" strokeWidth="2" strokeDasharray="290" strokeDashoffset="290" opacity="0">
+                                                                <animate id="responseLineShow2" attributeName="opacity" values="0;1" dur="0.1s" begin="processAnim2.end" fill="freeze"/>
+                                                                <animate id="responseAnim2" attributeName="stroke-dashoffset" from="290" to="0" dur="1.5s" begin="responseLineShow2.end" repeatCount="1"/>
+                                                                <animate attributeName="stroke-dashoffset" to="290" dur="0.1s" begin="resetAnim2.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="finalLineShow2.begin" fill="freeze"/>
+                                                            </path>
+                                                            {/* Moving arrow head for Response */}
+                                                            <path d="M0,0 l-8,4 v-8 z" fill="#DC2626" opacity="0">
+                                                                <animate attributeName="opacity" values="0;1" dur="0.1s" begin="responseLineShow2.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="finalLineShow2.begin" fill="freeze"/>
+                                                                <animateMotion dur="1.5s" begin="responseLineShow2.end" repeatCount="1"
+                                                                    path="M340,97 L60,117" rotate="auto"/>
+                                                            </path>
+                                                        </g>
+
+                                                        {/* Final message (T5->T6) */}
+                                                        <g>
+                                                            <path d="M60,137 L340,137" stroke="#6366F1" strokeWidth="2" strokeDasharray="290" strokeDashoffset="290" opacity="0">
+                                                                <animate id="finalLineShow2" attributeName="opacity" values="0;1" dur="0.1s" begin="responseAnim2.end+0.5s" fill="freeze"/>
+                                                                <animate id="finalAnim2" attributeName="stroke-dashoffset" from="290" to="0" dur="1.5s" begin="finalLineShow2.end" repeatCount="1"/>
+                                                                <animate attributeName="stroke-dashoffset" to="290" dur="0.1s" begin="resetAnim2.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="resetAnim2.begin" fill="freeze"/>
+                                                            </path>
+                                                            {/* Moving arrow head for Final */}
+                                                            <path d="M0,0 l-8,4 v-8 z" fill="#6366F1" opacity="0">
+                                                                <animate attributeName="opacity" values="0;1" dur="0.1s" begin="finalLineShow2.end" fill="freeze"/>
+                                                                <animate attributeName="opacity" values="1;0" dur="0.1s" begin="resetAnim2.begin" fill="freeze"/>
+                                                                <animateMotion dur="1.5s" begin="finalLineShow2.end" repeatCount="1"
+                                                                    path="M60,137 L340,137" rotate="auto"/>
+                                                            </path>
+                                                        </g>
+
+                                                        {/* Arrival indicators */}
+                                                        <circle cx="350" cy="57" r="3" fill="#10B981" opacity="0">
+                                                            <animate attributeName="opacity" values="0;1" dur="0.1s" begin="pollAnim2.end" fill="freeze"/>
+                                                            <animate attributeName="opacity" values="1;0" dur="0.1s" begin="processAnim2.end" fill="freeze"/>
+                                                        </circle>
+                                                        <circle cx="50" cy="117" r="3" fill="#DC2626" opacity="0">
+                                                            <animate attributeName="opacity" values="0;1" dur="0.1s" begin="responseAnim2.end" fill="freeze"/>
+                                                            <animate attributeName="opacity" values="1;0" dur="0.1s" begin="finalLineShow2.begin" fill="freeze"/>
+                                                        </circle>
+                                                        <circle cx="350" cy="137" r="3" fill="#6366F1" opacity="0">
+                                                            <animate attributeName="opacity" values="0;1" dur="0.1s" begin="finalAnim2.end" fill="freeze"/>
+                                                            <animate attributeName="opacity" values="1;0" dur="0.1s" begin="resetAnim2.begin" fill="freeze"/>
+                                                        </circle>
+
+                                                        {/* Animation reset trigger */}
+                                                        <animate id="resetAnim2" attributeName="opacity" from="1" to="1" dur="0.1s" begin="finalAnim2.end+0.5s" repeatCount="1"/>
+                                                    </g>
+                                                </svg>
+                                            </div>
+                                            <div className="text-sm space-y-2">
+                                                <p>Steps | 步驟：</p>
+                                                <ol className="list-decimal list-inside space-y-1 pl-4">
+                                                    <li>Initiator 發送 Poll 訊息 (T1)</li>
+                                                    <li>Responder 接收到 Poll 訊息 (T2)</li>
+                                                    <li>Responder 處理後發送 Response 訊息 (T3)</li>
+                                                    <li>Initiator 接收到 Response 訊息 (T4)</li>
+                                                    <li>Initiator 發送 Final 訊息 (T5)</li>
+                                                    <li>Responder 接收到 Final 訊息 (T6)</li>
+                                                </ol>
+                                                <div className="katex-formula">
+                                                    T<sub>prop</sub> = [(T<sub>4</sub> - T<sub>1</sub>)(T<sub>6</sub> - T<sub>3</sub>) - (T<sub>3</sub> - T<sub>2</sub>)(T<sub>5</sub> - T<sub>4</sub>)] / [2(T<sub>4</sub> - T<sub>1</sub> + T<sub>6</sub> - T<sub>3</sub>)]
+                                                </div>
+                                                <p className="text-xs text-gray-600 mt-2">
+                                                    DS-ATWR 通過雙向測量和時鐘漂移補償，提供更高的測距精度
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <p className="mb-1">Distance Calculation | 距離計算：</p>
                                         <MathDisplay tex="d = c \times t" displayMode={true} />
-                                        <p className="text-xs text-gray-600 mt-1">
+                                        <div className="text-xs text-gray-600 mt-1">
                                             Distance is calculated using Time of Flight (TOF) principle | 使用飛行時間原理計算距離：
                                             <br/>• d: distance between anchor and tag | 基站和標籤之間的距離
                                             <br/>• c: speed of light (≈ 3×10⁸ m/s) | 光速（約 3×10⁸ 米/秒）
                                             <br/>• t: time taken for signal to travel from anchor to tag and back | 信號從基站到標籤往返的時間
                                             <br/>UWB achieves high accuracy by precise time measurement in nanoseconds | UWB通過納秒級精確時間測量實現高精度
-                                        </p>
+                                        </div>
                                     </div>
 
                                     <div>
                                         <p className="mb-1">Position Calculation | 位置計算：</p>
                                         <MathDisplay tex="(x-x_1)^2 + (y-y_1)^2 = d_1^2" displayMode={true} />
-                                        <p className="text-xs text-gray-600 mt-1">
+                                        <div className="text-xs text-gray-600 mt-1">
                                             Based on the circle equation, where | 基於圓方程，其中：
-                                            <li className="flex items-center"> <MathDisplay tex="(x,y)" displayMode={false} className="inline-block" />: unknown tag position to be found | 待求的標籤位置</li>
-                                            <li className="flex items-center"> <MathDisplay tex="(x_1,y_1)" displayMode={false} className="inline-block" />: known anchor position | 已知的基站位置</li>
-                                            <li className="flex items-center"> <MathDisplay tex="d_1" displayMode={false} className="inline-block" />: measured distance between anchor and tag | 測量的基站和標籤之間距離</li>
-                                            <br/>Each anchor creates a circle, tag must lie on this circle | 每個基站形成一個圓，標籤必須位於圓上
-                                        </p>
+                                            <ul className="list-none space-y-1">
+                                                <li className="flex items-center">
+                                                    <MathDisplay tex="(x,y)" displayMode={false} /> : unknown tag position to be found | 待求的標籤位置
+                                                </li>
+                                                <li className="flex items-center">
+                                                    <MathDisplay tex="(x_1,y_1)" displayMode={false} /> : known anchor position | 已知的基站位置
+                                                </li>
+                                                <li className="flex items-center">
+                                                    <MathDisplay tex="d_1" displayMode={false} /> : measured distance between anchor and tag | 測量的基站和標籤之間距離
+                                                </li>
+                                            </ul>
+                                            <p className="mt-2">Each anchor creates a circle, tag must lie on this circle | 每個基站形成一個圓，標籤必須位於圓上</p>
+                                        </div>
                                     </div>
 
                                     {method === 'two' && (
