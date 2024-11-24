@@ -13,13 +13,41 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    <!-- KaTeX -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+    <!-- MathJax Configuration -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: true,
+                packages: ['base', 'ams', 'noerrors', 'noundefined']
+            },
+            svg: {
+                fontCache: 'global'
+            },
+            startup: {
+                typeset: false,
+                ready: function() {
+                    MathJax.startup.defaultReady();
+                    MathJax.startup.promise.then(() => {
+                        console.log('MathJax initial typesetting complete');
+                    });
+                }
+            },
+            options: {
+                enableMenu: false
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
     <style>
-        .katex { font-size: 1.1em; }
-        .math-display { margin: 1em 0; overflow-x: auto; }
+        .math-display {
+            margin: 1em 0;
+            overflow-x: auto;
+        }
+        .mjx-math {
+            font-size: 1.1em;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -65,6 +93,32 @@
                 className="w-full"
             />
         );
+
+        const MathDisplay = ({ tex, displayMode = true, className }) => {
+            const containerRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (containerRef.current) {
+                    if (!tex) return;
+
+                    containerRef.current.innerHTML = displayMode ? `$$${tex}$$` : `$${tex}$`;
+
+                    if (window.MathJax) {
+                        try {
+                            window.MathJax.typesetPromise([containerRef.current]).catch(err => {
+                                console.error('MathJax typesetting error:', err);
+                                containerRef.current.textContent = tex;
+                            });
+                        } catch (err) {
+                            console.error('MathJax error:', err);
+                            containerRef.current.textContent = tex;
+                        }
+                    }
+                }
+            }, [tex, displayMode]);
+
+            return <div ref={containerRef} className={`${className} math-display`}></div>;
+        };
 
         const UWBVisualization = () => {
             const [method, setMethod] = React.useState('two');
@@ -207,31 +261,15 @@
                 }
             }, [controlMode]);
 
-            // 在組件掛載後渲染數學公式
             React.useEffect(() => {
-                const renderMath = () => {
-                    document.querySelectorAll('.math-display').forEach(element => {
-                        const formula = element.getAttribute('data-math');
-                        try {
-                            katex.render(formula, element, {
-                                displayMode: true,
-                                throwOnError: false
-                            });
-                        } catch (e) {
-                            console.error('KaTeX error:', e);
-                            element.textContent = formula;
-                        }
-                    });
-                };
-                
-                // 確保 KaTeX 已加載
-                if (window.katex) {
-                    renderMath();
-                } else {
-                    // 如果 KaTeX 還沒加載完成，等待一下再試
-                    setTimeout(renderMath, 1000);
+                if (window.MathJax && window.MathJax.typeset) {
+                    try {
+                        window.MathJax.typeset();
+                    } catch (err) {
+                        console.error('MathJax error:', err);
+                    }
                 }
-            }, [method]);  // 當 method 改變時重新渲染
+            }, [method]); // 當方法改變時重新渲染公式
 
             return (
                 <div className="container mx-auto px-4 py-8">
@@ -281,9 +319,9 @@
                         </CardHeader>
                         <CardContent>
                             <div className="relative w-full h-96 bg-slate-50 rounded-lg">
-                                <svg 
-                                    width="100%" 
-                                    height="100%" 
+                                <svg
+                                    width="100%"
+                                    height="100%"
                                     viewBox="0 0 400 400"
                                     ref={svgRef}
                                     onMouseDown={handleMouseDown}
@@ -324,8 +362,8 @@
                                     ))}
                                     {method === 'many' && (
                                         <g>
-                                            <line x1={anchorConfigs[method][0].x} y1={anchorConfigs[method][0].y} 
-                                                  x2={anchorConfigs[method][1].x} y2={anchorConfigs[method][1].y} 
+                                            <line x1={anchorConfigs[method][0].x} y1={anchorConfigs[method][0].y}
+                                                  x2={anchorConfigs[method][1].x} y2={anchorConfigs[method][1].y}
                                                   stroke="rgba(0,0,255,0.8)" strokeWidth="2" />
                                             <line x1={anchorConfigs[method][1].x} y1={anchorConfigs[method][1].y}
                                                   x2={anchorConfigs[method][2].x} y2={anchorConfigs[method][2].y}
@@ -415,23 +453,23 @@
                                 <p>Current Status | 當前狀態：{controlMode === 'manual' ? 'Manual Control | 手動控制' : 'Inside Range | 基站範圍內'}</p>
                                 <p>Average Distance | 平均距離：{pixelToMeter(getPositioningError())}m</p>
                                 {method === 'two' && (
-                                    <p>Two-Anchor Positioning | 兩基站定位：
-                                        {tagPosition === 'inside' ? 
-                                            'May have two solutions | 可能有兩個解' : 
+                                    <p>Two-point Positioning | 雙點定位：
+                                        {tagPosition === 'inside' ?
+                                            'May have two solutions | 可能有兩個解' :
                                             'Positioning accuracy decreases when outside range | 在範圍外時定位精度下降'}
                                     </p>
                                 )}
                                 {method === 'three' && (
                                     <p>Three-Anchor Positioning | 三基站定位：
-                                        {tagPosition === 'inside' ? 
-                                            'Unique solution available | 有唯一解' : 
+                                        {tagPosition === 'inside' ?
+                                            'Unique solution available | 有唯一解' :
                                             'Solution may be less accurate outside range | 在範圍外時解可能不太準確'}
                                     </p>
                                 )}
                                 {method === 'many' && (
                                     <p>Multi-Anchor Positioning | 多基站定位：
-                                        {tagPosition === 'inside' ? 
-                                            'Higher accuracy with redundant measurements | 冗餘測量提高精度' : 
+                                        {tagPosition === 'inside' ?
+                                            'Higher accuracy with redundant measurements | 冗餘測量提高精度' :
                                             'Better accuracy even outside range | 即使在範圍外也有較好的精度'}
                                     </p>
                                 )}
@@ -442,7 +480,7 @@
                                 <div className="space-y-4">
                                     <div>
                                         <p className="mb-1">Distance Calculation | 距離計算：</p>
-                                        <p className="font-mono">d = c × t</p>
+                                        <MathDisplay tex="d = c \times t" displayMode={true} />
                                         <p className="text-xs text-gray-600 mt-1">
                                             Distance is calculated using Time of Flight (TOF) principle | 使用飛行時間原理計算距離：
                                             <br/>• d: distance between anchor and tag | 基站和標籤之間的距離
@@ -454,128 +492,76 @@
 
                                     <div>
                                         <p className="mb-1">Position Calculation | 位置計算：</p>
-                                        <p className="font-mono">(x-x₁)² + (y-y₁)² = d₁²</p>
+                                        <MathDisplay tex="(x-x_1)^2 + (y-y_1)^2 = d_1^2" displayMode={true} />
                                         <p className="text-xs text-gray-600 mt-1">
                                             Based on the circle equation, where | 基於圓方程，其中：
-                                            <br/>• (x,y): unknown tag position to be found | 待求的標籤位置
-                                            <br/>• (x₁,y₁): known anchor position | 已知的基站位置
-                                            <br/>• d₁: measured distance between anchor and tag | 測量的基站和標籤之間距離
+                                            <li className="flex items-center"> <MathDisplay tex="(x,y)" displayMode={false} className="inline-block" />: unknown tag position to be found | 待求的標籤位置</li>
+                                            <li className="flex items-center"> <MathDisplay tex="(x_1,y_1)" displayMode={false} className="inline-block" />: known anchor position | 已知的基站位置</li>
+                                            <li className="flex items-center"> <MathDisplay tex="d_1" displayMode={false} className="inline-block" />: measured distance between anchor and tag | 測量的基站和標籤之間距離</li>
                                             <br/>Each anchor creates a circle, tag must lie on this circle | 每個基站形成一個圓，標籤必須位於圓上
                                         </p>
                                     </div>
 
                                     {method === 'two' && (
                                         <div>
-                                            <p className="mb-1">Two Anchor Solution | 兩基站解算：</p>
-                                            <p className="text-xs text-gray-600 mt-1">
-                                                Two anchors create two circles | 兩個基站形成兩個圓：
-                                                <br/>• Circles intersect at 0, 1, or 2 points | 圓可能有0、1或2個交點
-                                                <br/>• Two intersection points: need additional information to choose correct one | 兩個交點：需要額外信息來選擇正確的點
-                                                <br/>• One intersection point: circles are tangent (rare case) | 一個交點：圓相切（罕見情況）
-                                                <br/>• No intersection: measurement error or out of range | 無交點：測量誤差或超出範圍
-                                                <br/>Usually requires a third anchor or height information to resolve ambiguity | 通常需要第三個基站或高度信息來解決歧義
-                                            </p>
+                                            <p className="mb-1">Two-point Positioning | 雙點定位：</p>
+                                            <MathDisplay tex="\begin{cases} (x-x_1)^2 + (y-y_1)^2 = d_1^2 \\ (x-x_2)^2 + (y-y_2)^2 = d_2^2 \end{cases}" displayMode={true} />
+                                            <div className="text-xs text-gray-600 mt-1">
+                                                <ul className="list-disc pl-4 space-y-1">
+                                                    <li className="flex items-center"><MathDisplay tex="(x,y)" displayMode={false} className="inline-block" />: Tag position | 標籤位置</li>
+                                                    <li className="flex items-center"><MathDisplay tex="(x_1,y_1),(x_2,y_2)" displayMode={false} className="inline-block" />: Anchor positions | 基站位置</li>
+                                                    <li className="flex items-center"><MathDisplay tex="d_1,d_2" displayMode={false} className="inline-block" />: Measured distances | 測量距離</li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     )}
 
                                     {method === 'three' && (
                                         <div>
                                             <p className="mb-1">Trilateration | 三邊定位：</p>
-                                            <p className="font-mono whitespace-pre-line">
-                                                (x-x₁)² + (y-y₁)² = d₁²
-                                                (x-x₂)² + (y-y₂)² = d₂²
-                                                (x-x₃)² + (y-y₃)² = d₃²
-                                            </p>
-                                            <p className="text-xs text-gray-600 mt-1">
-                                                Three anchors provide unique solution | 三個基站提供唯一解：
-                                                <br/>• System of three circle equations | 三個圓方程組成的系統
-                                                <br/>• Theoretically intersect at one point | 理論上在一點相交
-                                                <br/>• In practice, measurement errors create small area | 實際上由於測量誤差形成小區域
-                                                <br/>• Best position estimate is center of intersection area | 最佳位置估計在交集區域中心
-                                                <br/>• Accuracy depends on anchor geometry and measurement precision | 精度取決於基站幾何分布和測量精度
-                                            </p>
+                                            <MathDisplay tex="\begin{cases} (x-x_1)^2 + (y-y_1)^2 = d_1^2 \\ (x-x_2)^2 + (y-y_2)^2 = d_2^2 \\ (x-x_3)^2 + (y-y_3)^2 = d_3^2 \end{cases}" displayMode={true} />
+                                            <div className="text-xs text-gray-600 mt-1">
+                                                <ul className="list-disc pl-4 space-y-1">
+                                                    <li className="flex items-center"><MathDisplay tex="(x,y)" displayMode={false} className="inline-block" />: Tag position | 標籤位置</li>
+                                                    <li className="flex items-center"><MathDisplay tex="(x_1,y_1),(x_2,y_2),(x_3,y_3)" displayMode={false} className="inline-block" />: Anchor positions | 基站位置</li>
+                                                    <li className="flex items-center"><MathDisplay tex="d_1,d_2,d_3" displayMode={false} className="inline-block" />: Measured distances | 測量距離</li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     )}
 
                                     {method === 'many' && (
                                         <div>
                                             <p className="mb-1">Multilateration | 多邊定位：</p>
-                                            <p>Least squares optimization | 最小二乘法優化：</p>
-                                            <p className="font-mono">min Σ[(x-xᵢ)² + (y-yᵢ)² - dᵢ²]²</p>
-                                            <p className="text-xs text-gray-600 mt-1">
-                                                Multiple anchors improve accuracy | 多個基站提高精度：
-                                                <br/>• Minimizes sum of squared errors | 最小化誤差平方和
-                                                <br/>• Each anchor adds redundant measurement | 每個基站增加冗餘測量
-                                                <br/>• Reduces impact of individual measurement errors | 減少單個測量誤差的影響
-                                                <br/>• More anchors generally improve accuracy | 更多基站通常提高精度
-                                                <br/>• Optimal anchor placement: surrounding tag position | 最佳基站布置：圍繞標籤位置
-                                                <br/>• Iterative solution using numerical methods | 使用數值方法進行迭代求解
-                                            </p>
+                                            <MathDisplay tex="\begin{cases} (x_t-x_1)^2 + (y_t-y_1)^2 = d_1^2 \\ (x_t-x_2)^2 + (y_t-y_2)^2 = d_2^2 \\ \vdots \\ (x_t-x_n)^2 + (y_t-y_n)^2 = d_n^2 \end{cases}" displayMode={true} />
+                                            <div className="text-xs text-gray-600 mt-1 space-y-2">
+                                                <div>
+                                                    <p className="font-semibold mb-1">Basic Principles | 基本原理：</p>
+                                                    <ul className="list-disc pl-4 space-y-1">
+                                                        <li className="flex items-center"><MathDisplay tex="(x_t,y_t)" displayMode={false} className="inline-block" />: Tag position to be found | 待求的標籤位置</li>
+                                                        <li className="flex items-center"><MathDisplay tex="(x_1,y_1), (x_2,y_2), \dots" displayMode={false} className="inline-block" />: Known anchor positions | 已知的基站位置</li>
+                                                        <li className="flex items-center"><MathDisplay tex="d_1, d_2, \dots" displayMode={false} className="inline-block" />: Measured distances | 測量距離</li>
+                                                    </ul>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold mb-1">Optimization Method | 優化方法：</p>
+                                                    <ul className="list-disc pl-4 space-y-1">
+                                                        <li>Uses least squares optimization | 使用最小二乘法優化</li>
+                                                        <li>Minimizes sum of squared errors | 最小化誤差平方和</li>
+                                                        <li>Iterative numerical solution | 迭代數值解算</li>
+                                                    </ul>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold mb-1">Advantages | 優勢：</p>
+                                                    <ul className="list-disc pl-4 space-y-1">
+                                                        <li>Multiple anchors improve accuracy | 多基站提高精度</li>
+                                                        <li>Redundant measurements reduce errors | 冗餘測量減少誤差</li>
+                                                        <li>Better reliability with optimal anchor placement | 最佳基站布置提高可靠性</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
-                                </div>
-                            </div>
-                            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                                <h3 className="font-bold mb-2">Error Analysis | 誤差分析</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="mb-1">Error Sources | 誤差來源：</p>
-                                        <div className="text-xs text-gray-600 mt-1">
-                                            <p className="font-semibold">1. Hardware Errors | 硬件誤差</p>
-                                            <ul className="list-disc pl-4 mb-2">
-                                                <li>Clock drift between anchors and tags | 基站和標籤之間的時鐘漂移</li>
-                                                <li>Antenna phase center variation | 天線相位中心變化</li>
-                                                <li>Temperature effects on electronics | 溫度對電子元件的影響</li>
-                                            </ul>
-
-                                            <p className="font-semibold">2. Environmental Errors | 環境誤差</p>
-                                            <ul className="list-disc pl-4 mb-2">
-                                                <li>Multipath effects | 多徑效應</li>
-                                                <li>Signal blocking and reflection | 信號阻擋和反射</li>
-                                                <li>Non-line-of-sight (NLOS) conditions | 非視線傳播條件</li>
-                                            </ul>
-
-                                            <p className="font-semibold">3. Geometric Errors | 幾何誤差</p>
-                                            <ul className="list-disc pl-4 mb-2">
-                                                <li>Poor anchor geometry (GDOP) | 基站幾何分布不佳</li>
-                                                <li>Height difference effects | 高度差異影響</li>
-                                                <li>Anchor position uncertainty | 基站位置不確定性</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <p className="mb-1">Error Mitigation | 誤差處理：</p>
-                                        <div className="text-xs text-gray-600 mt-1">
-                                            <p className="font-semibold">1. Hardware Calibration | 硬件校準</p>
-                                            <ul className="list-disc pl-4 mb-2">
-                                                <li>Antenna delay calibration | 天線延遲校準</li>
-                                                <li>Temperature compensation | 溫度補償</li>
-                                                <li>Clock synchronization | 時鐘同步</li>
-                                            </ul>
-
-                                            <p className="font-semibold">2. Signal Processing | 信號處理</p>
-                                            <ul className="list-disc pl-4 mb-2">
-                                                <li>Channel impulse response analysis | 信道衝擊響應分析</li>
-                                                <li>First path detection | 首徑檢測</li>
-                                                <li>NLOS identification | 非視距識別</li>
-                                            </ul>
-
-                                            <p className="font-semibold">3. Algorithm Enhancement | 算法增強</p>
-                                            <ul className="list-disc pl-4 mb-2">
-                                                <li>Kalman filtering | 卡爾曼濾波</li>
-                                                <li>Weighted least squares | 加權最小二乘</li>
-                                                <li>NLOS mitigation algorithms | 非視距緩解算法</li>
-                                            </ul>
-
-                                            <p className="font-semibold">4. System Design | 系統設計</p>
-                                            <ul className="list-disc pl-4 mb-2">
-                                                <li>Optimal anchor placement | 最優基站布置</li>
-                                                <li>Redundant measurements | 冗餘測量</li>
-                                                <li>Dynamic error thresholding | 動態誤差閾值</li>
-                                            </ul>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </CardContent>
