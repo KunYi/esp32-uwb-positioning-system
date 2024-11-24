@@ -2,6 +2,8 @@
 
 A comprehensive Ultra-Wideband (UWB) positioning system implementation using ESP32 and DW3000 modules. This project enables accurate distance measurement and position tracking using multiple anchors and tags.
 
+This project is based on and enhanced from the [Makerfabs ESP32 UWB DW3000 Range Example](https://github.com/Makerfabs/Makerfabs-ESP32-UWB-DW3000/tree/main/example/range), extending its capabilities with additional features and improvements for a complete positioning system.
+
 This project was developed using [Windsurf](https://codeium.com/windsurf), the world's first agentic IDE, which provides an integrated development environment with AI assistance for efficient coding and project management.
 
 ## Features
